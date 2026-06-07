@@ -22,6 +22,7 @@
 #include "Chat.h"
 #include "ChatPackets.h"
 #include "Common.h"
+#include "Config.h"
 #include "GameTime.h"
 #include "GridNotifiersImpl.h"
 #include "Group.h"
@@ -41,6 +42,9 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include <string_view>
+#include <cctype>
+#include <array>
 
 inline bool isNasty(uint8 c)
 {
@@ -56,6 +60,148 @@ inline bool isNasty(uint8 c)
 
     return false;
 }
+
+namespace
+{
+    bool ZoeStartsWithNoCase(std::string const& text, std::string_view prefix)
+    {
+        if (text.size() < prefix.size())
+            return false;
+
+        for (std::size_t i = 0; i < prefix.size(); ++i)
+        {
+            unsigned char a = static_cast<unsigned char>(text[i]);
+            unsigned char b = static_cast<unsigned char>(prefix[i]);
+
+            if (std::tolower(a) != std::tolower(b))
+                return false;
+        }
+
+        return true;
+    }
+
+    void ZoeTrimLeftSpaces(std::string& text)
+    {
+        while (!text.empty() && text.front() == ' ')
+            text.erase(text.begin());
+    }
+
+
+    bool ZoeEqualsNoCase(std::string const& left, std::string_view right)
+    {
+        if (left.size() != right.size())
+            return false;
+
+        for (std::size_t i = 0; i < right.size(); ++i)
+        {
+            unsigned char a = static_cast<unsigned char>(left[i]);
+            unsigned char b = static_cast<unsigned char>(right[i]);
+
+            if (std::tolower(a) != std::tolower(b))
+                return false;
+        }
+
+        return true;
+    }
+
+    void ZoeStripLeftSpaces(std::string& text)
+    {
+        while (!text.empty() && text.front() == ' ')
+            text.erase(text.begin());
+    }
+
+    bool ZoeIsStandaloneTagTarget(std::string const& to)
+    {
+        return ZoeEqualsNoCase(to, "FREE")
+            || ZoeEqualsNoCase(to, "VIP")
+            || ZoeEqualsNoCase(to, "MASTER");
+    }
+
+    void ZoeFixWhisperTargetFromSpacedTag(std::string& to, std::string& msg)
+    {
+        // Caso gerado pelo client ao clicar em "FREE - Wolf":
+        //   to  = "FREE"
+        //   msg = "- Wolf texto"
+        if (!ZoeIsStandaloneTagTarget(to))
+            return;
+
+        ZoeStripLeftSpaces(msg);
+
+        if (msg.size() < 3)
+            return;
+
+        if (msg[0] != '-')
+            return;
+
+        msg.erase(0, 1);
+        ZoeStripLeftSpaces(msg);
+
+        if (msg.empty())
+            return;
+
+        std::size_t endName = msg.find(' ');
+        std::string realName = endName == std::string::npos ? msg : msg.substr(0, endName);
+
+        if (realName.empty())
+            return;
+
+        to = realName;
+
+        if (endName == std::string::npos)
+        {
+            msg.clear();
+        }
+        else
+        {
+            msg.erase(0, endName);
+            ZoeStripLeftSpaces(msg);
+        }
+    }
+
+    void ZoeStripPlayerTagsFromName(std::string& name)
+    {
+        static constexpr std::array<std::string_view, 18> tags =
+        {
+            "FREE - ",
+            "VIP - ",
+            "MASTER - ",
+            "VIP MASTER - ",
+            "FREE-",
+            "VIP-",
+            "MASTER-",
+            "VIP MASTER-",
+            "<FREE>",
+            "[FREE]",
+            "<PLAYER>",
+            "[PLAYER]",
+            "<VIP>",
+            "[VIP]",
+            "<VIP MASTER>",
+            "[VIP MASTER]",
+            "<MASTER>",
+            "[MASTER]"
+        };
+
+        bool changed = true;
+        while (changed)
+        {
+            changed = false;
+            ZoeTrimLeftSpaces(name);
+
+            for (std::string_view tag : tags)
+            {
+                if (ZoeStartsWithNoCase(name, tag))
+                {
+                    name.erase(0, tag.size());
+                    ZoeTrimLeftSpaces(name);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 
 void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
 {
@@ -376,6 +522,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             break;
         case CHAT_MSG_WHISPER:
             {
+                ZoeFixWhisperTargetFromSpacedTag(to, msg);
+                ZoeStripPlayerTagsFromName(to);
+
                 if (!normalizePlayerName(to))
                 {
                     SendPlayerNotFoundNotice(to);

@@ -16,6 +16,8 @@
  */
 
 #ifndef QueryPackets_h__
+#include <string>
+
 #define QueryPackets_h__
 
 #include "Packet.h"
@@ -44,8 +46,8 @@ namespace WorldPackets
 
             PackedGuid Guid;
             uint8 NameUnknown = false;
-            std::string_view Name;
-            std::string_view RealmName = ""; // Only set for cross realm interaction (such as Battlegrounds)
+            std::string Name;
+            std::string RealmName = ""; // Only set for cross realm interaction (such as Battlegrounds)
             uint8 Race = RACE_NONE;
             uint8 Sex = GENDER_MALE;
             uint8 Class = CLASS_NONE;

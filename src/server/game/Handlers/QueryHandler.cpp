@@ -16,10 +16,13 @@
  */
 
 #include "Common.h"
+#include "Config.h"
+#include "DatabaseEnv.h"
 #include "GameTime.h"
 #include "Log.h"
 #include "MapMgr.h"
 #include "NPCHandler.h"
+#include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Pet.h"
@@ -28,6 +31,110 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+
+
+
+namespace
+{
+    enum class ZoeVipTagLevel : uint8
+    {
+        Free = 0,
+        Vip = 1,
+        VipMaster = 2
+    };
+
+    void ZoeReplaceAll(std::string& text, std::string const& search, std::string const& replace)
+    {
+        if (search.empty())
+            return;
+
+        size_t pos = 0;
+        while ((pos = text.find(search, pos)) != std::string::npos)
+        {
+            text.replace(pos, search.length(), replace);
+            pos += replace.length();
+        }
+    }
+
+    bool ZoePlayerHasTagItem(ObjectGuid guid, uint32 itemId)
+    {
+        if (!itemId)
+            return false;
+
+        bool checkBank = sConfigMgr->GetOption<bool>("PlayerTags.Item.CheckBank", false);
+
+        if (Player* player = ObjectAccessor::FindConnectedPlayer(guid))
+            return player->HasItemCount(itemId, 1, checkBank);
+
+        // Opcional. Normalmente o nome visível no mundo é de player online.
+        // Deixe desligado se quiser que a tag dependa somente do player online.
+        if (!sConfigMgr->GetOption<bool>("PlayerTags.Item.CheckOfflineInventory", false))
+            return false;
+
+        if (QueryResult result = CharacterDatabase.Query(
+            "SELECT 1 "
+            "FROM character_inventory ci "
+            "INNER JOIN item_instance ii ON ii.guid = ci.item "
+            "WHERE ci.guid = {} AND ii.itemEntry = {} LIMIT 1",
+            guid.GetCounter(), itemId))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    ZoeVipTagLevel ZoeGetVipTagLevel(ObjectGuid guid)
+    {
+        // VIP MASTER tem prioridade se o jogador possuir os dois itens.
+        uint32 vipMasterItemId = sConfigMgr->GetOption<uint32>("PlayerTags.VipMasterItemId", 90001);
+        if (ZoePlayerHasTagItem(guid, vipMasterItemId))
+            return ZoeVipTagLevel::VipMaster;
+
+        uint32 vipItemId = sConfigMgr->GetOption<uint32>("PlayerTags.VipItemId", 90000);
+        if (ZoePlayerHasTagItem(guid, vipItemId))
+            return ZoeVipTagLevel::Vip;
+
+        return ZoeVipTagLevel::Free;
+    }
+
+    std::string ZoeBuildTaggedPlayerName(ObjectGuid guid, std::string const& realName)
+    {
+        if (!sConfigMgr->GetOption<bool>("PlayerTags.Enable", true))
+            return realName;
+
+        ZoeVipTagLevel level = ZoeGetVipTagLevel(guid);
+
+        std::string tag;
+        std::string format;
+
+        switch (level)
+        {
+            case ZoeVipTagLevel::VipMaster:
+                tag = sConfigMgr->GetOption<std::string>("PlayerTags.VipMasterTag", "<VIP MASTER>");
+                format = sConfigMgr->GetOption<std::string>("PlayerTags.Format.VipMaster", "{tag}{name}");
+                break;
+            case ZoeVipTagLevel::Vip:
+                tag = sConfigMgr->GetOption<std::string>("PlayerTags.VipTag", "<VIP>");
+                format = sConfigMgr->GetOption<std::string>("PlayerTags.Format.Vip", "{tag}{name}");
+                break;
+            case ZoeVipTagLevel::Free:
+            default:
+                tag = sConfigMgr->GetOption<std::string>("PlayerTags.FreeTag", "<FREE>");
+                format = sConfigMgr->GetOption<std::string>("PlayerTags.Format.Free", "{tag}{name}");
+                break;
+        }
+
+        ZoeReplaceAll(format, "{tag}", tag);
+        ZoeReplaceAll(format, "{name}", realName);
+
+        uint32 maxLen = sConfigMgr->GetOption<uint32>("PlayerTags.MaxDisplayLength", 64);
+        if (maxLen && format.size() > maxLen)
+            format.resize(maxLen);
+
+        return format;
+    }
+}
 
 void WorldSession::SendNameQueryOpcode(ObjectGuid guid)
 {
@@ -45,7 +152,7 @@ void WorldSession::SendNameQueryOpcode(ObjectGuid guid)
     Player* player = ObjectAccessor::FindConnectedPlayer(guid);
 
     nameQueryResponse.NameUnknown = false;
-    nameQueryResponse.Name = playerData->Name;
+    nameQueryResponse.Name = ZoeBuildTaggedPlayerName(guid, playerData->Name);
     nameQueryResponse.Race = player ? player->getRace() : playerData->Race;
     nameQueryResponse.Sex = player ? player->getGender() : playerData->Sex;
     nameQueryResponse.Class = player ? player->getClass() : playerData->Class;
