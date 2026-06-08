@@ -517,9 +517,26 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
     float attPowerMultiplier = GetPctModifierValue(unitMod, TOTAL_PCT) - 1.0f;
 
     sScriptMgr->OnPlayerAfterUpdateAttackPowerAndDamage(this, level, base_attPower, attPowerMod, attPowerMultiplier, ranged);
-    SetInt32Value(index, (uint32)base_attPower);            //UNIT_FIELD_(RANGED)_ATTACK_POWER field
-    SetInt32Value(index_mod, (uint32)attPowerMod);          //UNIT_FIELD_(RANGED)_ATTACK_POWER_MODS field
-    SetFloatValue(index_mult, attPowerMultiplier);          //UNIT_FIELD_(RANGED)_ATTACK_POWER_MULTIPLIER field
+
+    // ZoeCore HardEdit:
+    // O client 3.3.5 pode interpretar UNIT_FIELD_(RANGED)_ATTACK_POWER_MODS
+    // como valor limitado/empacotado em 16 bits para exibição.
+    // Quando o modificador positivo passa de ~32767, o UnitAttackPower()
+    // pode retornar Pos negativo, por exemplo:
+    //   45100 - 65536 = -20436
+    //
+    // Para servidor Hard Edit, mantemos o dano correto e corrigimos o visual
+    // movendo o modificador positivo alto para o campo BASE de Attack Power,
+    // que suporta valor maior para exibição no client.
+    if (attPowerMod > 30000.0f)
+    {
+        base_attPower += attPowerMod;
+        attPowerMod = 0.0f;
+    }
+
+    SetInt32Value(index, int32(base_attPower));              // UNIT_FIELD_(RANGED)_ATTACK_POWER field
+    SetInt32Value(index_mod, int32(attPowerMod));            // UNIT_FIELD_(RANGED)_ATTACK_POWER_MODS field
+    SetFloatValue(index_mult, attPowerMultiplier);           // UNIT_FIELD_(RANGED)_ATTACK_POWER_MULTIPLIER field
 
     //automatically update weapon damage after attack power modification
     if (ranged)
