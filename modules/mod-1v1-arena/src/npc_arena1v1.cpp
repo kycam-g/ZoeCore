@@ -16,6 +16,9 @@
 #include "ArenaTeam.h"
 #include "Language.h"
 #include "Config.h"
+#include "DatabaseEnv.h"
+#include "Item.h"
+#include "ObjectAccessor.h"
 #include "Log.h"
 #include "Player.h"
 #include "ScriptedGossip.h"
@@ -23,6 +26,8 @@
 #include "Chat.h"
 #include "npc_1v1arena.h"
 #include "WorldSessionMgr.h"
+#include <array>
+#include <unordered_map>
 
 #define NPC_TEXT_ENTRY_1v1 999992
 
@@ -35,6 +40,11 @@ uint32 ARENA_SLOT_1V1 = 3;
 
 //Config
 std::vector<uint32> forbiddenTalents;
+
+// ZoeCore Gear Bracket stores
+std::unordered_map<uint32, uint8> ZoeArena1v1ItemTierStore;
+std::unordered_map<ObjectGuid, uint8> ZoeArena1v1QueueBracketStore;
+std::unordered_map<ObjectGuid, uint8> ZoeArena1v1PlayerBracketStore;
 
 namespace
 {
@@ -75,6 +85,306 @@ namespace
             return;
 
         LOG_INFO("module", "ZoeCore Arena1v1: {}", message);
+    }
+
+    bool ZoeArena1v1GearBracketEnabled()
+    {
+        return ZoeArena1v1Enabled() && sConfigMgr->GetOption<bool>("Arena1v1.Zoe.GearBracket.Enable", false);
+    }
+
+    bool ZoeArena1v1GearBracketQueueSplitEnabled()
+    {
+        return ZoeArena1v1GearBracketEnabled() && sConfigMgr->GetOption<uint8>("Arena1v1.Zoe.GearBracket.Mode", 2) >= 2;
+    }
+
+    bool ZoeArena1v1GearBracketLockEnabled()
+    {
+        return ZoeArena1v1GearBracketEnabled() && sConfigMgr->GetOption<bool>("Arena1v1.Zoe.GearBracket.LockEquipmentInsideArena", true);
+    }
+
+    uint8 ZoeArena1v1GetItemTier(uint32 entry)
+    {
+        auto itr = ZoeArena1v1ItemTierStore.find(entry);
+        if (itr == ZoeArena1v1ItemTierStore.end())
+            return 255;
+
+        return itr->second;
+    }
+
+    uint8 ZoeArena1v1MaxTierForBracket(uint8 bracket)
+    {
+        switch (bracket)
+        {
+            case 1:
+                return sConfigMgr->GetOption<uint8>("Arena1v1.Zoe.GearBracket.Normal.MaxTier", 1);
+            case 2:
+                return sConfigMgr->GetOption<uint8>("Arena1v1.Zoe.GearBracket.Advanced.MaxTier", 3);
+            case 3:
+                return sConfigMgr->GetOption<uint8>("Arena1v1.Zoe.GearBracket.Elite.MaxTier", 4);
+            default:
+                return sConfigMgr->GetOption<uint8>("Arena1v1.Zoe.GearBracket.Normal.MaxTier", 1);
+        }
+    }
+
+    char const* ZoeArena1v1BracketName(uint8 bracket)
+    {
+        switch (bracket)
+        {
+            case 1:
+                return "Normal +0/+1";
+            case 2:
+                return "Advanced +2/+3";
+            case 3:
+                return "Elite +4";
+            default:
+                return "Normal +0/+1";
+        }
+    }
+
+    std::string ZoeArena1v1BracketColor(uint8 bracket)
+    {
+        switch (bracket)
+        {
+            case 1:
+                return "|cff00ff00[Normal]|r";
+            case 2:
+                return "|cffffcc00[Advanced]|r";
+            case 3:
+                return "|cffff0000[Elite]|r";
+            default:
+                return "|cff00ff00[Normal]|r";
+        }
+    }
+
+    std::string ZoeArena1v1AllowedTierText(uint8 bracket)
+    {
+        switch (bracket)
+        {
+            case 1:
+                return "Cruel +0/+1";
+            case 2:
+                return "Cruel +0/+1/+2/+3";
+            case 3:
+                return "Cruel +0/+1/+2/+3/+4";
+            default:
+                return "Cruel +0/+1";
+        }
+    }
+
+    void ZoeArena1v1LoadItemTiers()
+    {
+        ZoeArena1v1ItemTierStore.clear();
+
+        if (!ZoeArena1v1GearBracketEnabled() || !sConfigMgr->GetOption<bool>("Arena1v1.Zoe.GearBracket.UseSqlItemTierTable", true))
+            return;
+
+        QueryResult result = WorldDatabase.Query("SELECT `entry`, `tier` FROM `custom_bg_item_tier` WHERE `enabled` = 1");
+        if (!result)
+        {
+            LOG_WARN("module", "ZoeCore Arena1v1 GearBracket: tabela custom_bg_item_tier vazia ou inexistente. Bracket por gear ficara inativo.");
+            return;
+        }
+
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 entry = fields[0].Get<uint32>();
+            uint8 tier = fields[1].Get<uint8>();
+
+            ZoeArena1v1ItemTierStore[entry] = tier;
+        }
+        while (result->NextRow());
+
+        LOG_INFO("module", "ZoeCore Arena1v1 GearBracket: carregados {} itens custom na tabela custom_bg_item_tier.", ZoeArena1v1ItemTierStore.size());
+    }
+
+    uint8 ZoeArena1v1CalculatePlayerBracket(Player* player)
+    {
+        if (!player)
+            return 1;
+
+        uint8 maxTier = 0;
+
+        for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+        {
+            Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+            if (!item)
+                continue;
+
+            uint8 tier = ZoeArena1v1GetItemTier(item->GetEntry());
+            if (tier == 255)
+                continue;
+
+            if (tier > maxTier)
+                maxTier = tier;
+        }
+
+        if (maxTier <= sConfigMgr->GetOption<uint8>("Arena1v1.Zoe.GearBracket.Normal.MaxTier", 1))
+            return 1;
+
+        if (maxTier <= sConfigMgr->GetOption<uint8>("Arena1v1.Zoe.GearBracket.Advanced.MaxTier", 3))
+            return 2;
+
+        return 3;
+    }
+
+    uint8 ZoeArena1v1GetPlayerBracket(Player* player)
+    {
+        if (!player)
+            return 1;
+
+        auto itr = ZoeArena1v1PlayerBracketStore.find(player->GetGUID());
+        if (itr != ZoeArena1v1PlayerBracketStore.end())
+            return itr->second;
+
+        return ZoeArena1v1CalculatePlayerBracket(player);
+    }
+
+    void ZoeArena1v1SetPlayerBracket(Player* player, bool announce)
+    {
+        if (!ZoeArena1v1GearBracketEnabled() || !player)
+            return;
+
+        uint8 bracket = ZoeArena1v1CalculatePlayerBracket(player);
+        ZoeArena1v1PlayerBracketStore[player->GetGUID()] = bracket;
+
+        if (announce && sConfigMgr->GetOption<bool>("Arena1v1.Zoe.GearBracket.Announce", true))
+        {
+            ZoeArena1v1Message(player, "Categoria de gear: " + ZoeArena1v1BracketColor(bracket) + ". Limite permitido: " + ZoeArena1v1AllowedTierText(bracket) + ".");
+        }
+
+        ZoeArena1v1Log("gear bracket player='" + player->GetName() + "' bracket='" + std::string(ZoeArena1v1BracketName(bracket)) + "'");
+    }
+
+    void ZoeArena1v1ClearPlayerBracket(Player* player)
+    {
+        if (!player)
+            return;
+
+        ZoeArena1v1PlayerBracketStore.erase(player->GetGUID());
+        ZoeArena1v1QueueBracketStore.erase(player->GetGUID());
+    }
+
+    void ZoeArena1v1CleanupQueueStore()
+    {
+        for (auto itr = ZoeArena1v1QueueBracketStore.begin(); itr != ZoeArena1v1QueueBracketStore.end();)
+        {
+            Player* player = ObjectAccessor::FindConnectedPlayer(itr->first);
+
+            if (!player ||
+                (!player->InBattlegroundQueueForBattlegroundQueueType(bgQueueTypeId) &&
+                 !player->IsInvitedForBattlegroundQueueType(bgQueueTypeId)))
+                itr = ZoeArena1v1QueueBracketStore.erase(itr);
+            else
+                ++itr;
+        }
+    }
+
+    bool ZoeArena1v1CanJoinQueueWithBracket(Player* player, uint8 bracket)
+    {
+        if (!ZoeArena1v1GearBracketQueueSplitEnabled() || !player)
+            return true;
+
+        ZoeArena1v1CleanupQueueStore();
+
+        bool fallback = sConfigMgr->GetOption<bool>("Arena1v1.Zoe.GearBracket.LowPopulationFallback", false);
+
+        if (!fallback)
+        {
+            for (auto const& [guid, queuedBracket] : ZoeArena1v1QueueBracketStore)
+            {
+                if (guid == player->GetGUID())
+                    continue;
+
+                if (queuedBracket != bracket)
+                {
+                    ZoeArena1v1Message(player, "Fila 1v1 protegida por bracket. Agora existe jogador na fila " +
+                        ZoeArena1v1BracketColor(queuedBracket) + ". Sua categoria atual e " + ZoeArena1v1BracketColor(bracket) + ".");
+
+                    ZoeArena1v1Message(player, "Aguarde esta fila formar ou entre com equipamento compativel. Mistura de +0/+1 com +4 esta bloqueada.");
+
+                    ZoeArena1v1Log("queue blocked player='" + player->GetName() + "' bracket='" + std::string(ZoeArena1v1BracketName(bracket)) +
+                        "' existing='" + std::string(ZoeArena1v1BracketName(queuedBracket)) + "'");
+
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void ZoeArena1v1TrackQueuedPlayer(Player* player, uint8 bracket)
+    {
+        if (!ZoeArena1v1GearBracketEnabled() || !player)
+            return;
+
+        ZoeArena1v1QueueBracketStore[player->GetGUID()] = bracket;
+        ZoeArena1v1PlayerBracketStore[player->GetGUID()] = bracket;
+    }
+
+    bool ZoeArena1v1CanEquipItem(Player* player, Item* item)
+    {
+        if (!ZoeArena1v1GearBracketLockEnabled() || !player || !item)
+            return true;
+
+        Battleground* bg = player->GetBattleground();
+        if (!bg || !bg->isArena() || bg->GetArenaType() != ARENA_TYPE_1V1)
+            return true;
+
+        uint8 itemTier = ZoeArena1v1GetItemTier(item->GetEntry());
+        if (itemTier == 255)
+            return true;
+
+        uint8 bracket = ZoeArena1v1GetPlayerBracket(player);
+        uint8 maxAllowed = ZoeArena1v1MaxTierForBracket(bracket);
+
+        if (itemTier <= maxAllowed)
+            return true;
+
+        ZoeArena1v1Message(player, "Troca bloqueada: este item Cruel +" + std::to_string(itemTier) +
+            " pertence a uma bracket superior. Sua arena atual permite somente " + ZoeArena1v1AllowedTierText(bracket) + ".");
+
+        ZoeArena1v1Log("equip blocked player='" + player->GetName() + "' bracket='" + std::string(ZoeArena1v1BracketName(bracket)) +
+            "' itemEntry=" + std::to_string(item->GetEntry()) + " itemTier=+" + std::to_string(itemTier));
+
+        return false;
+    }
+
+    void ZoeArena1v1AuditEquipment(Player* player, bool notify)
+    {
+        if (!ZoeArena1v1GearBracketLockEnabled() || !player)
+            return;
+
+        Battleground* bg = player->GetBattleground();
+        if (!bg || !bg->isArena() || bg->GetArenaType() != ARENA_TYPE_1V1)
+            return;
+
+        uint8 bracket = ZoeArena1v1GetPlayerBracket(player);
+        uint8 maxAllowed = ZoeArena1v1MaxTierForBracket(bracket);
+
+        for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+        {
+            Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+            if (!item)
+                continue;
+
+            uint8 itemTier = ZoeArena1v1GetItemTier(item->GetEntry());
+            if (itemTier == 255)
+                continue;
+
+            if (itemTier > maxAllowed)
+            {
+                if (notify)
+                    ZoeArena1v1Message(player, "Auditoria anti-bypass: item Cruel +" + std::to_string(itemTier) +
+                        " invalido para esta Arena 1v1. Limite atual: " + ZoeArena1v1AllowedTierText(bracket) + ".");
+
+                ZoeArena1v1Log("audit invalid item player='" + player->GetName() + "' bracket='" + std::string(ZoeArena1v1BracketName(bracket)) +
+                    "' itemEntry=" + std::to_string(item->GetEntry()) + " itemTier=+" + std::to_string(itemTier));
+
+                return;
+            }
+        }
     }
 
     void ZoeArena1v1GiveReward(Player* player, bool win, bool draw, bool isRated)
@@ -189,6 +499,8 @@ public:
         BattlegroundMgr::queueToBg.insert({ BATTLEGROUND_QUEUE_1V1,   BATTLEGROUND_AA });
         BattlegroundMgr::QueueToArenaType.emplace(BATTLEGROUND_QUEUE_1V1, (ArenaType) ARENA_TYPE_1V1);
         BattlegroundMgr::ArenaTypeToQueue.emplace(ARENA_TYPE_1V1, (BattlegroundQueueTypeId) BATTLEGROUND_QUEUE_1V1);
+
+        ZoeArena1v1LoadItemTiers();
     }
 
 };
@@ -200,7 +512,10 @@ public:
         PLAYERHOOK_ON_LOGIN,
         PLAYERHOOK_ON_GET_MAX_PERSONAL_ARENA_RATING_REQUIREMENT,
         PLAYERHOOK_ON_GET_ARENA_TEAM_ID,
-        PLAYERHOOK_NOT_SET_ARENA_TEAM_INFO_FIELD
+        PLAYERHOOK_NOT_SET_ARENA_TEAM_INFO_FIELD,
+        PLAYERHOOK_ON_LOGOUT,
+        PLAYERHOOK_ON_BEFORE_UPDATE,
+        PLAYERHOOK_CAN_EQUIP_ITEM
     }) { }
 
     void OnPlayerLogin(Player* pPlayer) override
@@ -232,6 +547,30 @@ public:
 
         return true;
     }
+
+    void OnPlayerLogout(Player* player) override
+    {
+        ZoeArena1v1ClearPlayerBracket(player);
+    }
+
+    void OnPlayerBeforeUpdate(Player* player, uint32 diff) override
+    {
+        if (_zoeGearCheck <= diff)
+        {
+            ZoeArena1v1AuditEquipment(player, true);
+            _zoeGearCheck = sConfigMgr->GetOption<uint32>("Arena1v1.Zoe.GearBracket.PeriodicCheck.Seconds", 5) * IN_MILLISECONDS;
+        }
+        else
+            _zoeGearCheck -= diff;
+    }
+
+    bool OnPlayerCanEquipItem(Player* player, uint8 /*slot*/, uint16& /*dest*/, Item* pItem, bool /*swap*/, bool /*not_loading*/) override
+    {
+        return ZoeArena1v1CanEquipItem(player, pItem);
+    }
+
+private:
+    uint32 _zoeGearCheck = 5000;
 };
 
 
@@ -352,6 +691,7 @@ bool npc_1v1arena::OnGossipSelect(Player* player, Creature* creature, uint32 /*s
             WorldPacket data;
             data << arenaType << (uint8)0x0 << (uint32)BATTLEGROUND_AA << (uint16)0x0 << (uint8)0x0;
             player->GetSession()->HandleBattleFieldPortOpcode(data);
+            ZoeArena1v1ClearPlayerBracket(player);
             CloseGossipMenuFor(player);
             return true;
         }
@@ -364,6 +704,8 @@ bool npc_1v1arena::OnGossipSelect(Player* player, Creature* creature, uint32 /*s
             {
                 std::stringstream s;
                 s << "|cffff2020=== ZoeCore Arena 1v1 ===|r";
+                if (ZoeArena1v1GearBracketEnabled())
+                    s << "\nBracket atual: " << ZoeArena1v1BracketColor(ZoeArena1v1CalculatePlayerBracket(player));
                 s << "\nRating: " << at->GetStats().Rating;
                 s << "\nRank: " << at->GetStats().Rank;
                 s << "\nSeason Games: " << at->GetStats().SeasonGames;
@@ -477,6 +819,16 @@ bool npc_1v1arena::JoinQueueArena(Player* player, Creature* /* me */, bool isRat
     bg->SetRated(isRated);
     bg->SetMaxPlayersPerTeam(1);
 
+    uint8 zoeBracket = ZoeArena1v1GearBracketEnabled() ? ZoeArena1v1CalculatePlayerBracket(player) : 1;
+
+    if (!ZoeArena1v1CanJoinQueueWithBracket(player, zoeBracket))
+        return false;
+
+    // Separação extra por matchmaking: brackets diferentes recebem faixas de MMR muito distantes.
+    // Isso evita mistura caso dois jogadores de brackets diferentes entrem por caminhos diferentes.
+    if (ZoeArena1v1GearBracketQueueSplitEnabled() && !sConfigMgr->GetOption<bool>("Arena1v1.Zoe.GearBracket.LowPopulationFallback", false))
+        matchmakerRating += (uint32(zoeBracket) - 1) * sConfigMgr->GetOption<uint32>("Arena1v1.Zoe.GearBracket.MatchmakerOffset", 100000);
+
     GroupQueueInfo* ginfo = bgQueue.AddGroup(player, nullptr, bgTypeId, bracketEntry, arenatype, isRated != 0, false, arenaRating, matchmakerRating, ateamId, 0);
     uint32 avgTime = bgQueue.GetAverageQueueWaitTime(ginfo);
     uint32 queueSlot = player->AddBattlegroundQueueId(bgQueueTypeId);
@@ -488,13 +840,22 @@ bool npc_1v1arena::JoinQueueArena(Player* player, Creature* /* me */, bool isRat
 
     sBattlegroundMgr->ScheduleQueueUpdate(matchmakerRating, arenatype, bgQueueTypeId, bgTypeId, bracketEntry->GetBracketId());
 
+    ZoeArena1v1TrackQueuedPlayer(player, zoeBracket);
+
     if (sConfigMgr->GetOption<bool>("Arena1v1.Zoe.Announce.JoinQueue", true))
-        ZoeArena1v1Message(player, std::string("Voce entrou na fila Arena 1v1 ") + (isRated ? "Rated" : "Unrated") + ".");
+    {
+        std::string msg = std::string("Voce entrou na fila Arena 1v1 ") + (isRated ? "Rated" : "Unrated") + ".";
+        if (ZoeArena1v1GearBracketEnabled())
+            msg += " Bracket: " + ZoeArena1v1BracketColor(zoeBracket) + ".";
+
+        ZoeArena1v1Message(player, msg);
+    }
 
     if (sConfigMgr->GetOption<bool>("Arena1v1.Zoe.Announce.GlobalJoinQueue", false))
         ZoeArena1v1GlobalMessage("|cff00ff00" + player->GetName() + "|r entrou na fila Arena 1v1 " + (isRated ? "Rated" : "Unrated") + ".");
 
-    ZoeArena1v1Log("join queue player='" + player->GetName() + "' rated=" + std::to_string(isRated ? 1 : 0));
+    ZoeArena1v1Log("join queue player='" + player->GetName() + "' rated=" + std::to_string(isRated ? 1 : 0) +
+        " bracket='" + std::string(ZoeArena1v1BracketName(zoeBracket)) + "'");
 
     return true;
 }
@@ -667,6 +1028,8 @@ public:
                     ZoeArena1v1Log("deserter applied player='" + player->GetName() + "'");
                 }
 
+                ZoeArena1v1ClearPlayerBracket(player);
+
                 if (sConfigMgr->GetOption<bool>("Arena1v1.StopGameIncomplete", true))
                 {
                     bg->SetRated(false);
@@ -694,6 +1057,8 @@ public:
 
                 if (applyDeserter && !player->HasAura(26013))
                     player->CastSpell(player, 26013, true);
+
+                ZoeArena1v1ClearPlayerBracket(player);
             }
             break;
         }
@@ -743,6 +1108,7 @@ public:
         bool win = !draw && player->GetBgTeamId() == winnerTeamId;
 
         ZoeArena1v1GiveReward(player, win, draw, bg->isRated());
+        ZoeArena1v1ClearPlayerBracket(player);
     }
 };
 

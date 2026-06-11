@@ -197,3 +197,40 @@ Arena1v1.Zoe.Reward.Draw.ArenaPoints = 0
 Arena1v1.Zoe.Reward.Draw.Item = 900001
 Arena1v1.Zoe.Reward.Draw.ItemCount = 1
 
+
+
+###################################################################################################
+# ZOECORE ARENA 1V1 - GEAR BRACKET V2
+#
+#   Brackets:
+#       Normal   = Cruel +0/+1
+#       Advanced = Cruel +2/+3
+#       Elite    = Cruel +4
+#
+#   Mode:
+#       1 = classifica + bloqueia equip acima da bracket dentro da arena
+#       2 = separa/protege a fila por bracket + bloqueia equip
+#
+###################################################################################################
+
+Arena1v1.Zoe.GearBracket.Enable = 1
+Arena1v1.Zoe.GearBracket.Mode = 2
+Arena1v1.Zoe.GearBracket.UseSqlItemTierTable = 1
+
+Arena1v1.Zoe.GearBracket.Normal.MaxTier = 1
+Arena1v1.Zoe.GearBracket.Advanced.MaxTier = 3
+Arena1v1.Zoe.GearBracket.Elite.MaxTier = 4
+
+Arena1v1.Zoe.GearBracket.LowPopulationFallback = 0
+
+# Offset alto usado para impedir match cross-bracket pelo matchmaker.
+Arena1v1.Zoe.GearBracket.MatchmakerOffset = 100000
+
+Arena1v1.Zoe.GearBracket.LockEquipmentInsideArena = 1
+Arena1v1.Zoe.GearBracket.AllowWeaponSwap = 1
+
+Arena1v1.Zoe.GearBracket.PeriodicCheck.Enable = 1
+Arena1v1.Zoe.GearBracket.PeriodicCheck.Seconds = 5
+
+Arena1v1.Zoe.GearBracket.Announce = 1
+
