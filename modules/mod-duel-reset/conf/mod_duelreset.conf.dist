@@ -1,0 +1,221 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE DUEL RESET FINAL
+#
+# Config padronizada:
+#   configs/modules/mod_duelreset.conf
+#
+###################################################################################################
+
+#
+#    DuelReset.Cooldowns
+#        Reseta cooldowns antes do duelo e restaura os cooldowns antigos depois.
+#
+
+DuelReset.Cooldowns = 1
+
+#
+#    DuelReset.HealthMana
+#        Salva HP/Mana antes do duelo.
+#        A V3 ZoeCore permite começar full e terminar full ou restaurar valor antigo.
+#
+
+DuelReset.HealthMana = 1
+
+#
+#    DuelReset.CooldownAge
+#        Tempo mínimo, em segundos, desde que o cooldown começou para permitir reset no início.
+#
+
+DuelReset.CooldownAge = 30
+
+#
+#    DuelReset.Zones
+#        Whitelist de ZoneIDs separados por ;.
+#        "" = qualquer zona
+#        "0" = nenhuma, usa apenas Areas
+#
+
+DuelReset.Zones = "0"
+
+#
+#    DuelReset.Areas
+#        Whitelist de AreaIDs separados por ;.
+#        Padrão: Elwynn Forest, Durotar, Gates of Ironforge.
+#
+
+DuelReset.Areas = "12;14;809"
+
+###################################################################################################
+# ZOECORE OPTIONS
+###################################################################################################
+
+DuelReset.Zoe.Enable = 1
+DuelReset.Zoe.MessagePrefix = "[ZoeCore Duel]"
+DuelReset.Zoe.Announce = 1
+DuelReset.Zoe.Log.Enable = 1
+
+#
+# Evita qualquer efeito em BG/Arena.
+#
+
+DuelReset.Zoe.BlockInBattlegroundOrArena = 1
+
+#
+# HP/Mana no início do duelo.
+# 1 = começa full HP/Power
+# 0 = mantém comportamento base.
+#
+
+DuelReset.Zoe.StartFullHealthMana = 1
+
+#
+# HP/Mana ao finalizar duelo vencido.
+# 0 = restaura HP/Mana anterior ao duelo
+# 1 = finaliza full HP/Power
+#
+
+DuelReset.Zoe.EndFullHealthMana = 1
+
+#
+# Fuga/interrupção do duelo.
+# 1 = limpa estados salvos para evitar cooldown/HP preso no mapa interno.
+#
+
+DuelReset.Zoe.ClearStateOnInterruptedOrFled = 1
+
+#
+# Mensagem quando a área não está liberada.
+#
+
+DuelReset.Zoe.AnnounceBlockedArea = 0
+
+
+###################################################################################################
+# ZOECORE V2 - POWERS EXPLÍCITOS
+#
+# Mana = full
+# Energy = full
+# Rage = zero
+# Runic Power = zero
+#
+# Isso garante Warrior/DK limpos no início/fim do duelo.
+###################################################################################################
+
+DuelReset.Zoe.Power.Reset = 1
+DuelReset.Zoe.Power.ResetAfterDuel = 1
+
+DuelReset.Zoe.Power.Mana.Full = 1
+DuelReset.Zoe.Power.Energy.Full = 1
+
+DuelReset.Zoe.Power.Rage.Zero = 1
+DuelReset.Zoe.Power.RunicPower.Zero = 1
+
+###################################################################################################
+# ZOECORE V2 - LIMPEZA DE DEBUFFS
+#
+# Remove debuffs/spells configurados no começo/fim/interrupção do duelo.
+#
+# Lista padrão inclui efeitos comuns de:
+# Shaman, Paladin, DK, Rogue, Mage, Warlock, Priest, Druid, Warrior, Hunter.
+#
+# Pode adicionar/remover IDs conforme seu servidor.
+###################################################################################################
+
+DuelReset.Zoe.RemoveDebuffs.Enable = 1
+DuelReset.Zoe.RemoveDebuffs.OnStart = 1
+DuelReset.Zoe.RemoveDebuffs.OnEnd = 1
+DuelReset.Zoe.RemoveDebuffs.OnInterruptedOrFled = 1
+
+# Spell IDs separados por ;
+DuelReset.Zoe.RemoveDebuffs.SpellIds = "66233;57723;57724;25771;11196;41425;57723;57724;8050;8056;8058;51514;3600;17364;25771;20066;853;10308;31803;55095;55078;45524;47476;49203;50436;51735;58180;2818;3409;13218;408;1833;51722;8647;57975;116;118;122;44457;44572;31661;31589;55080;172;980;348;1714;5782;30108;48181;18223;32386;589;2944;8122;15487;64044;8921;339;33786;770;2637;772;1715;12323;7922;5246;64382;1978;3034;3355;19503;5116;2974"
+
+
+
+###################################################################################################
+# ZOECORE V3 - CLASS DEBUFF FIX
+#
+# Adicionado para corrigir casos como:
+#   66233
+#   57723 Exhaustion
+#   57724 Sated
+#
+# SpellIds = lista padrão ZoeCore.
+# ExtraSpellIds = lista extra para você colocar novos IDs sem mexer na lista padrão.
+# Passes = número de passagens de remoção. Use 2 ou 3 para auras teimosas.
+###################################################################################################
+
+DuelReset.Zoe.RemoveDebuffs.ExtraSpellIds = "66233;57723;57724;25771"
+DuelReset.Zoe.RemoveDebuffs.Passes = 3
+
+
+
+###################################################################################################
+# ZOECORE V4 - ANÚNCIO DE VENCEDOR NO TOPO DA TELA
+#
+# Envia uma notificação estilo área no topo da tela, não no chat.
+#
+# ZoneOnly = 1 anuncia apenas para jogadores na mesma ZoneID do duelo.
+# AreaOnly = 1 restringe ainda mais para mesma AreaID.
+# OnlyAllowedArea = 1 anuncia apenas se o duelo estiver dentro da whitelist DuelReset.Zones/Areas.
+#
+# Tags disponíveis na mensagem:
+#   {winner}
+#   {loser}
+###################################################################################################
+
+DuelReset.Zoe.WinAnnounce.Enable = 1
+DuelReset.Zoe.WinAnnounce.Method = 2
+DuelReset.Zoe.WinAnnounce.ZoneOnly = 1
+DuelReset.Zoe.WinAnnounce.AreaOnly = 0
+DuelReset.Zoe.WinAnnounce.OnlyAllowedArea = 0
+DuelReset.Zoe.WinAnnounce.Message = "|cff00ff00{winner}|r venceu um duelo contra |cffff2020{loser}|r!"
+
+
+
+###################################################################################################
+# ZOECORE V6 - COOLDOWN EXTRA RESET
+#
+# Alguns cooldowns longos, como Lay on Hands do Paladin, não são resetados pela lógica base
+# porque a base preserva cooldowns acima de 10 minutos.
+#
+# Esta lista força o reset desses cooldowns no início do duelo e, por padrão,
+# também após finalizar o duelo.
+#
+# Lay on Hands ranks WotLK comuns:
+# 633;2800;10310;27154;48788
+###################################################################################################
+
+DuelReset.Zoe.Cooldown.ExtraReset.Enable = 1
+DuelReset.Zoe.Cooldown.ExtraReset.AfterDuel = 1
+DuelReset.Zoe.Cooldown.ExtraResetSpellIds = "633;2800;10310;27154;48788"
+
+###################################################################################################
+# ZOECORE V6 - WIN ANNOUNCE METHOD
+#
+# DuelReset.Zoe.WinAnnounce.Method:
+#   2 = SendAreaTriggerMessage, compatível com esta core
+#
+# Observação: esta core não possui WorldSession::SendNotification.
+###################################################################################################
+
+
+
+###################################################################################################
+# ZOECORE V7 - NOTIFICATION COMPILE FIX
+#
+# Esta core não possui WorldSession::SendNotification.
+# O anúncio de vencedor usa SendAreaTriggerMessage, que mostra aviso no topo/centro da tela
+# sem usar chat.
+###################################################################################################
+
+
+
+###################################################################################################
+# ZOECORE V8 - PERCENT S FIX
+#
+# Corrige notificação aparecendo como "%s".
+# O módulo agora envia a mensagem pronta diretamente no SendAreaTriggerMessage.
+###################################################################################################
+
