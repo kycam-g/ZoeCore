@@ -1,0 +1,74 @@
+#
+# ZoeCore Arena Replay
+# Base: https://github.com/azerothcore/mod-arena-replay
+#
+
+[worldserver]
+
+###################################################################################################
+# ZOECORE ARENA REPLAY V1
+#
+# NPC:
+#   .npc add 98500
+#
+# Observação:
+#   Se a core não tiver o hook OnBeforeArenaCheckWinConditions, aplique:
+#   core_patch/ZoeCore_ArenaReplay_CoreHook_19856.patch
+###################################################################################################
+
+ArenaReplay.Enable = 1
+
+# Apaga replays antigos depois de X dias.
+# 0 = nunca apagar.
+ArenaReplay.DeleteReplaysAfterDays = 30
+
+# 0 = mantém favoritos salvos mesmo limpando replay antigo.
+# 1 = remove favoritos que apontam para replay antigo.
+ArenaReplay.DeleteSavedReplays = 0
+
+# Salva replay apenas se a arena tiver duração mínima.
+# Padrão oficial: 75 segundos, contando delay inicial.
+# 0 = salvar sempre.
+ArenaReplay.ValidArenaDuration = 75
+
+# Salvar skirmish / arena não-rated.
+ArenaReplay.SaveUnratedArenas = 1
+
+# Salvar Battleground também.
+# Recomendo 0 no começo para não pesar o banco.
+ArenaReplay.SaveBattlegrounds = 0
+
+###################################################################################################
+# COMPATIBILIDADE ZOECORE
+###################################################################################################
+
+# Compatibilidade com mod-1v1-arena.
+ArenaReplay.1v1.Enable = 1
+ArenaReplay.1v1.ArenaType = 1
+
+# Compatibilidade com mod-arena-3v3-solo-queue.
+ArenaReplay.3v3soloQ.Enable = 1
+ArenaReplay.3v3soloQ.ArenaType = 4
+
+
+###################################################################################################
+# ZOECORE FIX - REPLAY SEM DESERTER
+#
+# Corrige o caso em que, ao finalizar um replay, o jogador recebia desertor de BG/Arena.
+#
+# O replay usa uma instância de BG/Arena falsa apenas para assistir.
+# Ao acabar, o jogador precisa sair sem ser punido como desertor real.
+###################################################################################################
+
+ArenaReplay.Zoe.NoDeserterOnReplayEnd.Enable = 1
+
+# Antes de chamar LeaveBattleground, coloca o replay em STATUS_WAIT_LEAVE.
+# Isso evita que a core trate a saída como abandono de BG/Arena em andamento.
+ArenaReplay.Zoe.NoDeserterOnReplayEnd.SetWaitLeaveStatus = 1
+
+# Segurança extra: remove a aura 26013 se a core/mod aplicar mesmo assim.
+ArenaReplay.Zoe.NoDeserterOnReplayEnd.RemoveDeserterAura = 1
+
+# Limpa o controle interno do replay ao finalizar.
+ArenaReplay.Zoe.NoDeserterOnReplayEnd.CleanupReplayData = 1
+
