@@ -1,0 +1,220 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE KILLSTREAK V1
+#
+# Sistema de sequência de kills PvP para BG, Arena, PvP Zone e/ou World PvP.
+#
+# Config:
+#   configs/modules/mod_killstreak.conf
+#
+# Moeda padrão:
+#   900001 = Fragmento Cruel
+###################################################################################################
+
+ZoeKillStreak.Enable = 1
+ZoeKillStreak.MessagePrefix = "[ZoeCore PvP]"
+ZoeKillStreak.Log.Enable = 0
+
+###################################################################################################
+# ONDE FUNCIONA
+###################################################################################################
+
+ZoeKillStreak.Scope.Battleground = 1
+ZoeKillStreak.Scope.Arena = 1
+ZoeKillStreak.Scope.World = 1
+ZoeKillStreak.Scope.PvPZones = 1
+
+# Zonas/areas PvP extras. Separar por ;
+# Exemplo:
+# ZoeKillStreak.Scope.PvPZoneIds = "139;1377"
+# ZoeKillStreak.Scope.PvPAreaIds = "2317;2597"
+ZoeKillStreak.Scope.PvPZoneIds = ""
+ZoeKillStreak.Scope.PvPAreaIds = ""
+
+###################################################################################################
+# ANTI-FARM
+###################################################################################################
+
+ZoeKillStreak.AntiFarm.Enable = 0
+ZoeKillStreak.AntiFarm.MinLevel = 80
+ZoeKillStreak.AntiFarm.BlockSameAccount = 1
+ZoeKillStreak.AntiFarm.SameVictimCooldownSeconds = 300
+
+###################################################################################################
+# RESET
+###################################################################################################
+
+ZoeKillStreak.Reset.OnDeath = 1
+ZoeKillStreak.Reset.OnLogout = 1
+ZoeKillStreak.Reset.OnMapChange = 1
+
+###################################################################################################
+# AURA E BUFFS
+###################################################################################################
+
+# Aura visual da seta/cabeça aplicada quando pegar 5+ kill streak.
+ZoeKillStreak.Aura.Marker.Enable = 1
+ZoeKillStreak.Aura.Marker.SpellId = 42171
+
+###################################################################################################
+# SCALE DO JOGADOR EM KILL STREAK
+#
+# Quando o jogador recebe a aura marker do streak, o módulo também aumenta o scale.
+# Ao morrer/sair/resetar streak, volta para o scale padrão.
+###################################################################################################
+
+ZoeKillStreak.Scale.Enable = 1
+ZoeKillStreak.Scale.Value = 1.4
+ZoeKillStreak.Scale.ResetValue = 1.00
+
+###################################################################################################
+# RESET VISUAL DA AURA E SCALE
+#
+# Aqui você controla especificamente se a aura do arrow e o scale devem ser removidos/resetados
+# em cada situação.
+#
+# A configuração de streak abaixo continua controlando se a sequência de kills zera:
+#   ZoeKillStreak.Reset.OnDeath
+#   ZoeKillStreak.Reset.OnLogout
+#   ZoeKillStreak.Reset.OnMapChange
+#
+# Esta nova configuração controla o VISUAL:
+#   aura 42171
+#   scale 1.15 -> 1.00
+###################################################################################################
+
+ZoeKillStreak.Aura.Marker.RemoveOnDeath = 1
+ZoeKillStreak.Aura.Marker.RemoveOnLogout = 1
+ZoeKillStreak.Aura.Marker.RemoveOnMapChange = 1
+
+ZoeKillStreak.Scale.Reset.OnDeath = 1
+ZoeKillStreak.Scale.Reset.OnLogout = 1
+ZoeKillStreak.Scale.Reset.OnMapChange = 1
+
+
+
+
+# Buffs de poder por streak.
+# Deixe 0 se quiser só aura visual.
+# Depois podemos criar spells custom de damage/defesa e colocar os IDs aqui.
+ZoeKillStreak.PowerBuff.Enable = 0
+ZoeKillStreak.PowerBuff.5.SpellId = 0
+ZoeKillStreak.PowerBuff.10.SpellId = 0
+ZoeKillStreak.PowerBuff.15.SpellId = 0
+ZoeKillStreak.PowerBuff.20.SpellId = 0
+ZoeKillStreak.PowerBuff.30.SpellId = 0
+
+###################################################################################################
+# RECOMPENSAS DO JOGADOR EM STREAK
+###################################################################################################
+
+ZoeKillStreak.Reward.Enable = 1
+ZoeKillStreak.Reward.ItemEntry = 900001
+
+ZoeKillStreak.Reward.5.ItemCount = 2
+ZoeKillStreak.Reward.5.Honor = 100
+
+ZoeKillStreak.Reward.10.ItemCount = 4
+ZoeKillStreak.Reward.10.Honor = 250
+
+ZoeKillStreak.Reward.15.ItemCount = 6
+ZoeKillStreak.Reward.15.Honor = 400
+
+ZoeKillStreak.Reward.20.ItemCount = 10
+ZoeKillStreak.Reward.20.Honor = 650
+
+ZoeKillStreak.Reward.30.ItemCount = 20
+ZoeKillStreak.Reward.30.Honor = 1200
+
+###################################################################################################
+# BOUNTY / SHUTDOWN
+#
+# Quem matar um jogador com streak recebe recompensa bônus.
+###################################################################################################
+
+ZoeKillStreak.Bounty.Enable = 1
+ZoeKillStreak.Bounty.MinStreak = 5
+ZoeKillStreak.Bounty.ItemEntry = 900001
+
+ZoeKillStreak.Bounty.5.ItemCount = 1
+ZoeKillStreak.Bounty.5.Honor = 100
+
+ZoeKillStreak.Bounty.10.ItemCount = 3
+ZoeKillStreak.Bounty.10.Honor = 250
+
+ZoeKillStreak.Bounty.15.ItemCount = 5
+ZoeKillStreak.Bounty.15.Honor = 400
+
+ZoeKillStreak.Bounty.20.ItemCount = 8
+ZoeKillStreak.Bounty.20.Honor = 650
+
+ZoeKillStreak.Bounty.30.ItemCount = 15
+ZoeKillStreak.Bounty.30.Honor = 1200
+
+
+
+###################################################################################################
+# SONS DO KILL STREAK
+#
+# Streak.SoundId toca quando o jogador chega em 5, 10, 15, 20 ou 30 kills.
+# Shutdown.SoundId toca quando o rei do PvP / jogador em streak morre.
+###################################################################################################
+
+ZoeKillStreak.Sound.Enable = 1
+ZoeKillStreak.Sound.Streak.Enable = 1
+ZoeKillStreak.Sound.Streak.SoundId = 8232
+ZoeKillStreak.Sound.Shutdown.Enable = 1
+ZoeKillStreak.Sound.Shutdown.SoundId = 8960
+
+###################################################################################################
+# ANÚNCIOS
+###################################################################################################
+
+# Top-screen no mapa/BG/Arena onde aconteceu.
+ZoeKillStreak.Announce.TopScreen = 1
+
+# Chat global do worldserver. Deixe 0 se quiser só top-screen.
+ZoeKillStreak.Announce.WorldChat = 0
+
+# Aviso privado para killer/vítima.
+ZoeKillStreak.Announce.Private = 1
+
+ZoeKillStreak.FirstBlood.Enable = 1
+
+ZoeKillStreak.Message.FirstBlood = "|cffff2020FIRST BLOOD!|r 
+|cffffff00{killer}|r |cffffffffabriu a contagem mandando|r |cffff2020{victim}|r |cffffffffpara o chão!|r"
+ZoeKillStreak.Message.5 = "|cffff6600{killer}|r já mandou |cffffff005 inimigos|r para o caixão!"
+ZoeKillStreak.Message.10 = "|cffff2020{killer}|r está em fúria! |cffffff0010 inimigos|r caíram diante dele!"
+ZoeKillStreak.Message.15 = "|cffffcc00{killer}|r está dominando o campo de batalha com |cffffff0015 abates|r!"
+ZoeKillStreak.Message.20 = "|cff00ff00{killer}|r está IMPARÁVEL! |cffffff0020 inimigos|r foram destruídos!"
+ZoeKillStreak.Message.30 = "|cff00ccff{killer}|r virou uma LENDA VIVA! |cffffff0030 kills sem cair|r!"
+
+ZoeKillStreak.Message.Shutdown = "|cffff2020{killer}|r |cffffffffencerrou a sequência brutal de|r |cffff2020{victim}|r |cffffffffe recebeu uma recompensa!|r"
+ZoeKillStreak.Message.VictimLost = "|cffffffffSua sequência de |cffff2020{streak}|r |cffffffffkills acabou!|r |cffffffffVocê foi caçado por |cffffffff{killer}.|r"
+
+
+
+###################################################################################################
+# ZOECORE V5 - QUEBRA DE LINHA NAS MENSAGENS
+#
+# Para quebrar linha dentro das mensagens do .conf, use:
+#   \n
+#
+# Exemplo:
+#   ZoeKillStreak.Message.FirstBlood = "|cffff2020FIRST BLOOD!|r\n|cffffff00{killer}|r abriu a contagem mandando\n|cffff6060{victim}|r para o chão!"
+#
+# Também funciona:
+#   {nl}
+#
+# Exemplo:
+#   ZoeKillStreak.Message.5 = "|cffff6600{killer}|r{nl}já mandou 5 inimigos para o caixão!"
+###################################################################################################
+
+
+# Tags disponíveis:
+#   {killer}
+#   {victim}
+#   {streak}
+#   {reward}
+###################################################################################################
