@@ -1,0 +1,121 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE BG REWARD V4 - PROTECTED HK/DEATHS FIX
+#
+# Recompensa de Battleground por vitória/derrota com bloqueios:
+#
+# - Sem recompensa se ficou AFK
+# - Sem recompensa se não causou dano/heal
+# - Sem recompensa se não morreu/matou/participou
+# - Sem recompensa se ficou pouco tempo na BG
+#
+# Moeda padrão:
+#   900001 = Fragmento Cruel
+#
+# Observação:
+#   Arena.Reward.Enable vem 0 por padrão para NÃO duplicar recompensa com:
+#   - mod-1v1-arena ZoeCore
+#   - mod-arena-3v3-solo-queue ZoeCore
+###################################################################################################
+
+Battleground.Reward.Enable = 1
+
+# Quantidade de item para time vencedor/perdedor.
+Battleground.Reward.WinnerTeam.Count = 8
+Battleground.Reward.LoserTeam.Count = 3
+
+# Item padrão caso o mapa/zona não seja reconhecido.
+Battleground.Reward.ItemID.Default = 900001
+
+# Todos os BGs pagando Fragmento Cruel.
+Battleground.Reward.ItemID.WS = 900001
+Battleground.Reward.ItemID.AB = 900001
+Battleground.Reward.ItemID.EY = 900001
+Battleground.Reward.ItemID.IC = 900001
+Battleground.Reward.ItemID.SA = 900001
+Battleground.Reward.ItemID.AV = 900001
+
+###################################################################################################
+# ANTI-AFK / REQUISITOS DE ATIVIDADE
+###################################################################################################
+
+Battleground.Reward.Require.Activity.Enable = 1
+
+# 1 = se o player estiver marcado AFK no fim da BG, não recebe.
+Battleground.Reward.Require.NotAFK = 1
+
+# Tempo mínimo dentro da BG em segundos.
+# O módulo registra a entrada por troca de mapa. Se não conseguir achar esse registro,
+# usa a duração total da BG como fallback.
+Battleground.Reward.Require.MinTimeSeconds = 120
+
+# Dano + cura mínimo para receber recompensa.
+# Use 0 para desativar.
+Battleground.Reward.Require.MinDamageOrHealing = 10000
+
+# Participação mínima:
+# V4: HonorableKills/Deaths sao protected na sua core.
+# A participacao agora e validada por dano+cura minimo e opcionalmente KillingBlows.
+# Use 0 para nao exigir killing blow, recomendado para healers.
+Battleground.Reward.Require.MinParticipationScore = 0
+
+# Opcional: exige killing blows. Recomendo 0 para nao bloquear healer/tank/objetivo.
+Battleground.Reward.Require.MinKillingBlows = 0
+
+# Se 1, quando o módulo não conseguir ler o score da BG do player, bloqueia recompensa.
+# Recomendo 1 para anti-farm mais seguro.
+Battleground.Reward.Require.BlockIfNoScore = 1
+
+# Se 1, avisa o player quando a recompensa for bloqueada.
+Battleground.Reward.Require.AnnounceBlocked = 1
+
+Battleground.Reward.Message.Blocked.AFK = "|cffff2020Recompensa bloqueada:|r voce terminou a BG marcado como AFK."
+Battleground.Reward.Message.Blocked.Time = "|cffff2020Recompensa bloqueada:|r voce ficou pouco tempo na BG."
+Battleground.Reward.Message.Blocked.DamageHealing = "|cffff2020Recompensa bloqueada:|r voce nao causou dano/cura suficiente."
+Battleground.Reward.Message.Blocked.Participation = "|cffff2020Recompensa bloqueada:|r voce nao atingiu os requisitos de participacao da BG."
+Battleground.Reward.Message.Blocked.NoScore = "|cffff2020Recompensa bloqueada:|r nao foi possivel validar sua participacao na BG."
+
+###################################################################################################
+# ANÚNCIO PRIVADO
+###################################################################################################
+
+Battleground.Reward.Announce.Private = 1
+Battleground.Reward.CurrencyName = "Fragmento Cruel"
+
+Battleground.Reward.Message.Winner = "|cff00ff00Vitoria na BG!|r Voce recebeu |cffffff00{count}x {currency}|r."
+Battleground.Reward.Message.Loser = "|cffffcc00Fim da BG!|r Voce recebeu |cffffff00{count}x {currency}|r pela participacao."
+
+###################################################################################################
+# ARENA REWARD
+#
+# Deixe 0 para evitar recompensa duplicada com seus módulos de 1v1 e Solo 3v3.
+###################################################################################################
+
+Arena.Reward.Enable = 0
+
+Arena.Reward.WinnerTeam.Count = 2
+Arena.Reward.LoserTeam.Count = 1
+
+Arena.Reward.Winner.ItemID.1v1 = 900001
+Arena.Reward.Loser.ItemID.1v1 = 900001
+
+Arena.Reward.Winner.ItemID.2v2 = 900001
+Arena.Reward.Loser.ItemID.2v2 = 900001
+
+Arena.Reward.Winner.ItemID.3v3 = 900001
+Arena.Reward.Loser.ItemID.3v3 = 900001
+
+Arena.Reward.Winner.ItemID.5v5 = 900001
+Arena.Reward.Loser.ItemID.5v5 = 900001
+
+Arena.Reward.Winner.ItemID.3v3Solo = 900001
+Arena.Reward.Loser.ItemID.3v3Solo = 900001
+
+Arena.Reward.1v1.ArenaType = 1
+Arena.Reward.3v3soloQ.ArenaType = 4
+
+Arena.Reward.Announce.Private = 1
+Arena.Reward.CurrencyName = "Fragmento Cruel"
+Arena.Reward.Message.Winner = "|cff00ff00Vitoria na Arena!|r Voce recebeu |cffffff00{count}x {currency}|r."
+Arena.Reward.Message.Loser = "|cffffcc00Fim da Arena!|r Voce recebeu |cffffff00{count}x {currency}|r pela participacao."
