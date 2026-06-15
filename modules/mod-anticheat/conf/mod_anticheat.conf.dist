@@ -1,0 +1,303 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE ANTICHEAT V2 - STATUS / WHITELIST / COOLDOWN
+#
+# Este módulo monitora movimentação suspeita e gera relatórios para GMs.
+#
+# Detecta, conforme configuração:
+# - Speed Hack
+# - Fly Hack
+# - Water Walk
+# - Jump Hack
+# - Teleport Hack
+# - Climb Hack
+# - Ignore Control
+# - Z Axis / Ignore Z
+# - Anti Swim
+# - Gravity Hack
+# - Anti Knockback
+# - No Fall Damage
+# - Exploit de início de BG
+# - Opcode ACK/Manipulação de pacotes
+#
+# IMPORTANTE:
+# - Anticheat pode gerar falso positivo dependendo de lag, spells, teleports, mapas custom e eventos.
+# - Recomendo começar com Kick/Ban/Jail automáticos DESATIVADOS.
+# - Use os alertas para analisar antes de punir automaticamente.
+###################################################################################################
+
+###################################################################################################
+# ATIVAR / DESATIVAR
+#
+# Anticheat.Enabled
+#   Descrição: Ativa ou desativa todo o sistema Anticheat.
+#   Padrão ZoeCore: 1
+#
+# Anticheat.EnabledOnGmAccounts
+#   Descrição: Ativa detecção também em contas GM.
+#   Recomendado: 0 para evitar testes/staff gerando falso positivo.
+###################################################################################################
+
+Anticheat.Enabled = 1
+Anticheat.EnabledOnGmAccounts = 0
+
+###################################################################################################
+# EXTRAS ZOECORE V2
+#
+# Estas opções reduzem falso positivo e facilitam operação da staff.
+###################################################################################################
+
+# Modo PvP Only:
+# 1 = o Anticheat só analisa movimento dentro de BG/Arena.
+# 0 = analisa o mundo todo.
+Anticheat.Zoe.PvPOnly.Enable = 0
+
+# Whitelist de mapas:
+# IDs de mapas separados por espaço onde o Anticheat NÃO verifica movimentação.
+# Exemplo: "37 489"
+Anticheat.Zoe.Whitelist.MapIds = ""
+
+# Whitelist de zonas:
+# IDs de zonas separados por espaço onde o Anticheat NÃO verifica movimentação.
+Anticheat.Zoe.Whitelist.ZoneIds = ""
+
+# Whitelist de áreas:
+# IDs de áreas separados por espaço onde o Anticheat NÃO verifica movimentação.
+Anticheat.Zoe.Whitelist.AreaIds = ""
+
+# Cooldown anti-spam de alerta para GM.
+# Evita flood de alerta repetido do mesmo player/tipo.
+Anticheat.Zoe.AlertCooldown.Enable = 1
+Anticheat.Zoe.AlertCooldown.Seconds = 15
+
+# Log quando um movimento for ignorado por whitelist.
+# Recomendado deixar 0 para não poluir console.
+Anticheat.Zoe.Whitelist.Log = 0
+
+
+###################################################################################################
+# RELATÓRIO DIÁRIO
+#
+# Anticheat.MaxReportsForDailyReport
+#   Descrição: Quantidade de reports necessária para salvar relatório diário no banco.
+#   Padrão: 70
+###################################################################################################
+
+Anticheat.MaxReportsForDailyReport = 70
+
+###################################################################################################
+# ALERTAS NO CHAT DOS GMs
+#
+# Anticheat.ReportInChatThreshold.Min.[Tipo]
+# Anticheat.ReportInChatThreshold.Max.[Tipo]
+#
+# Descrição:
+#   Define o intervalo de reports para enviar alerta aos GMs online.
+#   Exemplo: Min 50 / Max 60 = alerta do report 50 até 60.
+#   O Max precisa ser maior que o Min.
+#
+# Dica ZoeCore:
+#   Tipos com risco alto/mais crítico podem alertar cedo:
+#   Teleport, NoFallDamage, OpAck.
+###################################################################################################
+
+Anticheat.ReportInChatThreshold.Min.Speed = 50
+Anticheat.ReportInChatThreshold.Max.Speed = 60
+
+Anticheat.ReportInChatThreshold.Min.Fly = 50
+Anticheat.ReportInChatThreshold.Max.Fly = 60
+
+Anticheat.ReportInChatThreshold.Min.WaterWalk = 50
+Anticheat.ReportInChatThreshold.Max.WaterWalk = 60
+
+Anticheat.ReportInChatThreshold.Min.Jump = 50
+Anticheat.ReportInChatThreshold.Max.Jump = 60
+
+Anticheat.ReportInChatThreshold.Min.TeleportToPlane = 50
+Anticheat.ReportInChatThreshold.Max.TeleportToPlane = 60
+
+Anticheat.ReportInChatThreshold.Min.Climb = 50
+Anticheat.ReportInChatThreshold.Max.Climb = 60
+
+Anticheat.ReportInChatThreshold.Min.Teleport = 1
+Anticheat.ReportInChatThreshold.Max.Teleport = 60
+
+Anticheat.ReportInChatThreshold.Min.IgnoreControl = 50
+Anticheat.ReportInChatThreshold.Max.IgnoreControl = 60
+
+Anticheat.ReportInChatThreshold.Min.ZAxis = 50
+Anticheat.ReportInChatThreshold.Max.ZAxis = 60
+
+Anticheat.ReportInChatThreshold.Min.AntiSwim = 50
+Anticheat.ReportInChatThreshold.Max.AntiSwim = 60
+
+Anticheat.ReportInChatThreshold.Min.Gravity = 50
+Anticheat.ReportInChatThreshold.Max.Gravity = 60
+
+Anticheat.ReportInChatThreshold.Min.Antiknockback = 50
+Anticheat.ReportInChatThreshold.Max.Antiknockback = 60
+
+Anticheat.ReportInChatThreshold.Min.NoFallDamage = 1
+Anticheat.ReportInChatThreshold.Max.NoFallDamage = 60
+
+Anticheat.ReportInChatThreshold.Min.OpAck = 1
+Anticheat.ReportInChatThreshold.Max.OpAck = 60
+
+Anticheat.ReportInChatThreshold.Min.CounterMeasure = 50
+Anticheat.ReportInChatThreshold.Max.CounterMeasure = 60
+
+###################################################################################################
+# FREQUÊNCIA DE ALERTA
+#
+# Anticheat.AlertFrequency.[Tipo]
+#
+# Descrição:
+#   Frequência em que o alerta será enviado ao GM.
+#   Exemplo: se for 5, alerta a cada 5 reports dentro do intervalo Min/Max.
+###################################################################################################
+
+Anticheat.AlertFrequency.Speed = 5
+Anticheat.AlertFrequency.Fly = 5
+Anticheat.AlertFrequency.WaterWalk = 5
+Anticheat.AlertFrequency.Jump = 5
+Anticheat.AlertFrequency.TeleportToPlane = 1
+Anticheat.AlertFrequency.Climb = 5
+Anticheat.AlertFrequency.Teleport = 1
+Anticheat.AlertFrequency.IgnoreControl = 5
+Anticheat.AlertFrequency.ZAxis = 5
+Anticheat.AlertFrequency.AntiSwim = 5
+Anticheat.AlertFrequency.Gravity = 5
+Anticheat.AlertFrequency.Antiknockback = 1
+Anticheat.AlertFrequency.NoFallDamage = 1
+Anticheat.AlertFrequency.OpAck = 1
+Anticheat.AlertFrequency.CounterMeasure = 5
+
+###################################################################################################
+# MENSAGEM DE LOGIN / LOG / SALVAMENTO
+###################################################################################################
+
+# Mostra mensagem ao jogador ao logar informando que o servidor usa Anticheat.
+# Recomendado 0 para não poluir o chat.
+Anticheat.LoginMessage = 0
+
+# Escreve logs quando um jogador é detectado.
+# Recomendado 1 se quiser auditoria no console/log.
+Anticheat.WriteLog = 1
+
+# Intervalo em segundos para salvar reports no banco.
+Anticheat.SaveReportsTime = 60
+
+###################################################################################################
+# DETECÇÕES
+#
+# 1 = Ativado
+# 0 = Desativado
+#
+# Dica ZoeCore:
+#   Se houver falso positivo em mapa custom, spell custom ou evento, desative apenas o tipo problemático.
+###################################################################################################
+
+Anticheat.DetectFlyHack = 1
+Anticheat.DetectWaterWalkHack = 1
+Anticheat.DetectJumpHack = 1
+Anticheat.DetectTelePlaneHack = 1
+Anticheat.DetectSpeedHack = 1
+
+# Climb pode gerar falso positivo em alguns mapas/objetos custom.
+# Padrão ZoeCore seguro: 0. Ative depois se estiver estável.
+Anticheat.DetectClimbHack = 0
+
+Anticheat.DetectTelePortHack = 1
+Anticheat.IgnoreControlHack = 1
+Anticheat.DetectZaxisHack = 1
+Anticheat.AntiSwimHack = 1
+Anticheat.DetectGravityHack = 1
+Anticheat.AntiKnockBack = 1
+Anticheat.NoFallDamage = 1
+Anticheat.DetectBGStartHack = 1
+Anticheat.OpAckOrderHack = 1
+
+###################################################################################################
+# CHECKS MAIS RÍGIDOS
+#
+# Podem gerar falso positivo. Recomendado manter 0 até validar em produção.
+###################################################################################################
+
+Anticheat.StricterFlyHackCheck = 0
+Anticheat.StricterDetectJumpHack = 0
+
+###################################################################################################
+# TOLERÂNCIA DE SPEED HACK
+#
+# Anticheat.SpeedLimitTolerance
+#   Descrição: Tolerância percentual inteira para speed hack.
+#   Exemplo: 4 permite pequena variação por lag/micro rubberband.
+#
+# Padrão ZoeCore recomendado: 4
+###################################################################################################
+
+Anticheat.SpeedLimitTolerance = 4
+
+###################################################################################################
+# MODERAÇÃO AUTOMÁTICA
+#
+# Recomendação ZoeCore:
+#   Comece com Kick/Ban/Jail = 0.
+#   Use os relatórios para calibrar falsos positivos antes de punir automático.
+###################################################################################################
+
+Anticheat.KickPlayer = 0
+Anticheat.ReportsForKick = 70
+
+Anticheat.BanPlayer = 0
+Anticheat.ReportsForBan = 120
+
+Anticheat.JailPlayer = 0
+Anticheat.ReportsForJail = 90
+
+# Anunciar publicamente punições automáticas.
+Anticheat.AnnounceKick = 0
+Anticheat.AnnounceBan = 0
+Anticheat.AnnounceJail = 0
+
+###################################################################################################
+# COUNTER MEASURES / CONTRAMEDIDAS
+#
+# Contramedidas tentam reverter ou impedir o comportamento suspeito.
+# Algumas são seguras, outras podem atrapalhar jogador legítimo em falso positivo.
+###################################################################################################
+
+# Proteção contra manipulação de tempo. Ajuda contra exploits que podem causar instabilidade.
+Anticheat.CM.TIMEMANIPULATION = 1
+
+# Teleporta player de volta se detectar teleport hack.
+# Recomendado ativar só depois de validar falsos positivos.
+Anticheat.CM.Teleport = 0
+
+# Remove fly se detectar fly hack.
+Anticheat.CM.FLYHACK = 0
+
+# Força queda se detectar jump hack.
+Anticheat.CM.JUMPHACK = 0
+Anticheat.CM.ADVJUMPHACK = 0
+
+# Força queda se detectar ignore-z.
+Anticheat.CM.IGNOREZ = 0
+
+# Ajusta speed para rate do servidor se detectar speed hack.
+Anticheat.CM.SPEEDHACK = 0
+
+# BG: envia player de volta para posição inicial se sair da área antes de começar.
+Anticheat.BG.StartAreaTeleport = 0
+
+# Log das contramedidas.
+Anticheat.CM.WriteLog = 1
+
+# Alertar GMs quando uma contramedida for aplicada.
+Anticheat.CM.ALERTSCREEN = 0
+Anticheat.CM.ALERTCHAT = 1
+
+###################################################################################################
+# FIM
+###################################################################################################
