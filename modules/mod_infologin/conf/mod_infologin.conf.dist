@@ -1,0 +1,109 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE INFOLOGIN V2 - REI DO PVP SEMANAL / MENSAL
+#
+# Módulo convertido dos scripts Lua:
+# - 04-Expert_InfoLogin.lua
+# - anúncio de novo jogador / jogador online por facção e classe
+#
+# Recursos:
+# - Mensagem de boas-vindas no login
+# - Kills / Honor / Arena Points
+# - Tipo da conta: GM / VIP-1 / VIP-2 / Grátis
+# - Pontuação Rei do PvP
+# - Atual Rei do PvP
+# - Jogando desde
+# - Tempo total online
+# - Anúncio global de novo jogador
+# - Anúncio global de player online
+# - Anúncio global de player offline opcional
+#
+###################################################################################################
+
+###################################################################################################
+# GERAL
+###################################################################################################
+
+InfoLogin.Enable = 1
+
+# Delay em milissegundos para enviar as mensagens após login.
+InfoLogin.DelayMs = 1000
+
+# Prefixo visual das linhas privadas.
+InfoLogin.LinePrefix = "|cff00FFFF• |r"
+
+###################################################################################################
+# MENSAGENS PRIVADAS DE LOGIN
+###################################################################################################
+
+InfoLogin.Show.Welcome = 1
+InfoLogin.Show.Kills = 1
+InfoLogin.Show.Honor = 1
+InfoLogin.Show.Arena = 1
+InfoLogin.Show.AccountType = 1
+InfoLogin.Show.PvPKingScore = 1
+InfoLogin.Show.CurrentPvPKing = 1
+InfoLogin.Show.CurrentPvPKingWeekly = 1
+InfoLogin.Show.CurrentPvPKingMonthly = 1
+InfoLogin.Show.PvPKingWeeklyScore = 1
+InfoLogin.Show.PvPKingMonthlyScore = 1
+InfoLogin.Show.JoinDate = 1
+InfoLogin.Show.TotalOnlineTime = 1
+
+###################################################################################################
+# VIP / CONTA
+#
+# Mesmo padrão do script Lua antigo:
+# VIP-1 = item 33564
+# VIP-2 = item 33565
+###################################################################################################
+
+InfoLogin.FreeName = "|cff9932CCGratis|r"
+
+InfoLogin.Vip1.ItemEntry = 33564
+InfoLogin.Vip1.Name = "|cffFA58D0VIP-1|r"
+
+InfoLogin.Vip2.ItemEntry = 33565
+InfoLogin.Vip2.Name = "|cffDC143CVIP-2|r"
+
+###################################################################################################
+# REI DO PVP
+#
+# O módulo já cria as tabelas:
+# - zoecore_pvp_king
+# - zoecore_pvp_king_stats
+#
+# Esse InfoLogin apenas exibe a informação.
+# Depois podemos criar um módulo dedicado para atualizar pontuação, kills, streak e rei atual.
+###################################################################################################
+
+InfoLogin.PvPKing.Enable = 1
+
+# Se você quiser puxar do campo antigo characters.reidopvp, ative APENAS se essa coluna existir.
+# Padrão OFF para evitar erro SQL.
+InfoLogin.PvPKing.LegacyCharactersColumn.Enable = 0
+
+InfoLogin.PvPKing.ShowCurrentKing = 1
+
+###################################################################################################
+# ANÚNCIOS GLOBAIS
+###################################################################################################
+
+# Novo jogador:
+# Avisa apenas no primeiro login registrado na tabela zoecore_infologin_seen.
+# Para evitar anunciar players antigos depois de instalar o módulo, ele só anuncia como novo
+# se o total online do personagem for menor/igual a MaxTotalTimeSeconds.
+InfoLogin.Announce.NewPlayer.Enable = 1
+InfoLogin.Announce.NewPlayer.MaxTotalTimeSeconds = 60
+InfoLogin.Announce.NewPlayer.Message = "{faction} tem um novo membro {name} ({class})"
+
+# Player online:
+InfoLogin.Announce.Online.Enable = 1
+InfoLogin.Announce.Online.HideGM = 1
+InfoLogin.Announce.Online.Message = "{teamcolor}{name}|r acabou de entrar."
+
+# Player offline:
+InfoLogin.Announce.Offline.Enable = 0
+InfoLogin.Announce.Offline.HideGM = 1
+InfoLogin.Announce.Offline.Message = "{teamcolor}{name}|r agora esta offline."
