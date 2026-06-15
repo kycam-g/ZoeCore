@@ -1,0 +1,145 @@
+#
+# Copyright (C) 2016+ AzerothCore <www.azerothcore.org>
+# ZoeCore PT-BR / melhorias por MK
+#
+
+########################################
+# Configuracao do modulo ServerAutoShutdown
+########################################
+#
+# Este modulo agenda reinicio/desligamento automatico do worldserver.
+# Ele pode anunciar antes do reinicio, configurar horario fixo, reinicio por dia da semana
+# e iniciar eventos do game_event automaticamente apos o servidor subir.
+#
+
+[worldserver]
+
+###################################################################################################
+# ATIVAR MODULO
+#
+#    ServerAutoShutdown.Enabled
+#        Descricao: Ativa ou desativa o reinicio automatico do servidor.
+#        Padrao:   0 - Desativado
+#                  1 - Ativado
+#
+
+ServerAutoShutdown.Enabled = 1
+
+###################################################################################################
+# INTERVALO EM DIAS
+#
+#    ServerAutoShutdown.EveryDays
+#        Descricao: Reinicia a cada X dias.
+#                   Precisa ser maior que 0 e menor que 366.
+#                   Ignorado se ServerAutoShutdown.Weekday estiver configurado com valor valido.
+#        Padrao:   1 - Todos os dias
+#
+
+ServerAutoShutdown.EveryDays = 1
+
+###################################################################################################
+# DIA DA SEMANA
+#
+#    ServerAutoShutdown.Weekday
+#        Descricao: Reinicia em um dia fixo da semana.
+#                   0 = Domingo
+#                   1 = Segunda-feira
+#                   2 = Terca-feira
+#                   3 = Quarta-feira
+#                   4 = Quinta-feira
+#                   5 = Sexta-feira
+#                   6 = Sabado
+#
+#                   Se estiver entre 0 e 6, substitui ServerAutoShutdown.EveryDays.
+#
+#        Padrao:   -1 - Desativado
+#
+
+ServerAutoShutdown.Weekday = -1
+
+###################################################################################################
+# HORARIO DO REINICIO
+#
+#    ServerAutoShutdown.Time
+#        Descricao: Horario do reinicio no formato HH:MM:SS.
+#                   Usa formato 24 horas.
+#        Padrao:   "04:00:00"
+#
+
+ServerAutoShutdown.Time = "04:00:00"
+
+###################################################################################################
+# PRE-ANUNCIO PRINCIPAL
+#
+#    ServerAutoShutdown.PreAnnounce.Seconds
+#        Descricao: Quantos segundos antes do reinicio o servidor vai iniciar o countdown oficial.
+#                   Precisa ser menor que 86400 segundos.
+#        Padrao:   3600 - 1 hora
+#
+
+ServerAutoShutdown.PreAnnounce.Seconds = 3600
+
+#
+#    ServerAutoShutdown.PreAnnounce.Message
+#        Descricao: Mensagem enviada no pre-anuncio principal.
+#                   Use {} para mostrar o tempo restante formatado.
+#        Padrao:   "[ZoeCore]: Reinicio automatico do servidor em {}."
+#
+
+ServerAutoShutdown.PreAnnounce.Message = "|cffff2020[ZoeCore]|r Reinicio automatico do servidor em |cffffff00{}|r."
+
+###################################################################################################
+# ALERTAS EXTRAS ZOECORE
+#
+#    ServerAutoShutdown.MultiAnnounce.Enable
+#        Descricao: Ativa avisos extras antes do reinicio.
+#                   Esses avisos nao chamam ShutdownServ novamente; apenas avisam os jogadores.
+#        Padrao:   1 - Ativado
+#
+
+ServerAutoShutdown.MultiAnnounce.Enable = 1
+
+#
+#    ServerAutoShutdown.MultiAnnounce.Seconds
+#        Descricao: Lista de segundos antes do reinicio para enviar avisos extras.
+#                   Separe por espaco.
+#                   Exemplo: "1800 900 600 300 60 30 10"
+#
+#        Padrao:   "1800 900 600 300 60 30 10"
+#
+
+ServerAutoShutdown.MultiAnnounce.Seconds = "1800 900 600 300 60 30 10"
+
+#
+#    ServerAutoShutdown.MultiAnnounce.Message
+#        Descricao: Mensagem dos avisos extras.
+#                   Use {} para mostrar o tempo restante formatado.
+#        Padrao:   "[ZoeCore]: Reinicio automatico em {}."
+#
+
+ServerAutoShutdown.MultiAnnounce.Message = "|cffff2020[ZoeCore]|r Reinicio automatico em |cffffff00{}|r."
+
+###################################################################################################
+# LOG
+#
+#    ServerAutoShutdown.Zoe.Log.Enable
+#        Descricao: Mostra logs extras do ZoeCore no console.
+#        Padrao:   1 - Ativado
+#
+
+ServerAutoShutdown.Zoe.Log.Enable = 1
+
+###################################################################################################
+# EVENTOS PERSISTENTES
+#
+#    ServerAutoShutdown.StartEvents
+#        Descricao: Inicia os eventos listados sempre que o servidor subir.
+#                   Separe por espaco.
+#
+#        Exemplo:  "1 2"
+#                  Inicia Festival do Fogo do Solsticio e Festival do Véu de Inverno.
+#
+#        Padrao:   ""
+#
+
+ServerAutoShutdown.StartEvents = ""
