@@ -1,0 +1,131 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE GUILD HOUSE V3 - MENU / INFO / UPGRADE NPC
+#
+# Sistema de Casa da Guilda.
+#
+# Valores em copper:
+# - 10000 copper = 1 gold
+# - 1000000 copper = 100 gold
+# - 10000000 copper = 1000 gold
+#
+# Ranks:
+# - 0 = Guild Master
+# - 1 = Officer
+# - 2 = Veteran
+# - 3 = Member
+# - 4 = Initiate
+###################################################################################################
+
+###################################################################################################
+# ATIVAR MODULO
+###################################################################################################
+
+GuildHouse.Enable = 1
+
+###################################################################################################
+# BLOQUEIOS DE SEGURANCA
+###################################################################################################
+
+# Bloqueia teleport/compra/venda/spawn enquanto o jogador estiver em combate.
+GuildHouse.BlockInCombat = 1
+
+###################################################################################################
+# COMPRA / VENDA DA CASA
+###################################################################################################
+
+# Custo em gold/copper para comprar a Casa da Guilda.
+CostGuildHouse = 10000000
+
+# Compra da Casa da Guilda por item/moeda custom.
+# Por padrão usa Fragmento Cruel 900001.
+# Se AllowGoldFallback = 1, o jogador pode pagar com item OU com gold.
+# Se AlsoRequireGold = 1, precisa de item E gold.
+GuildHouse.BuyWithItem.Enable = 1
+GuildHouse.BuyWithItem.ItemEntry = 900001
+GuildHouse.BuyWithItem.ItemCount = 100
+GuildHouse.BuyWithItem.AllowGoldFallback = 1
+GuildHouse.BuyWithItem.AlsoRequireGold = 0
+
+# Rank mínimo para comprar melhorias dentro da Casa da Guilda.
+GuildHouseBuyRank = 4
+
+# Rank mínimo para vender a Casa da Guilda.
+GuildHouseSellRank = 0
+
+###################################################################################################
+# COMPRA DE MELHORIAS POR ITEM
+###################################################################################################
+
+# Permite pagar melhorias/NPCs/objetos com item/moeda custom.
+# Se AllowGoldFallback = 1, aceita item OU gold.
+# Se AlsoRequireGold = 1, exige item E gold.
+GuildHouse.UpgradeWithItem.Enable = 1
+GuildHouse.UpgradeWithItem.ItemEntry = 900001
+GuildHouse.UpgradeWithItem.ItemCount = 5
+GuildHouse.UpgradeWithItem.AllowGoldFallback = 1
+GuildHouse.UpgradeWithItem.AlsoRequireGold = 0
+
+###################################################################################################
+# LIMITES POR GUILDA
+###################################################################################################
+
+GuildHouse.Limit.Enable = 1
+
+# Máximo de NPCs/creatures na fase da guilda.
+GuildHouse.Limit.MaxCreatures = 40
+
+# Máximo de objetos/gameobjects na fase da guilda.
+GuildHouse.Limit.MaxGameObjects = 35
+
+###################################################################################################
+# SISTEMA DE LEVEL DA CASA
+###################################################################################################
+
+GuildHouse.Level.Enable = 1
+GuildHouse.Level.Default = 1
+GuildHouse.Level.Max = 3
+
+# Upgrade de level por item/moeda custom.
+GuildHouse.Level.Upgrade.ItemEntry = 900001
+GuildHouse.Level.Upgrade.Level2.ItemCount = 150
+GuildHouse.Level.Upgrade.Level3.ItemCount = 300
+
+# Upgrade de level por gold/copper, usado como fallback se habilitado.
+GuildHouse.Level.Upgrade.Level2.GoldCost = 10000000
+GuildHouse.Level.Upgrade.Level3.GoldCost = 25000000
+GuildHouse.Level.Upgrade.AllowGoldFallback = 1
+
+# Level necessário por categoria.
+GuildHouse.Level.Required.InnKeeper = 1
+GuildHouse.Level.Required.Mailbox = 1
+GuildHouse.Level.Required.Bank = 1
+GuildHouse.Level.Required.Vendor = 1
+GuildHouse.Level.Required.Object = 1
+GuildHouse.Level.Required.Portal = 2
+GuildHouse.Level.Required.Auctioneer = 2
+GuildHouse.Level.Required.Trainer = 2
+GuildHouse.Level.Required.Profession = 2
+GuildHouse.Level.Required.Spirit = 3
+
+###################################################################################################
+# LOG ADMINISTRATIVO
+###################################################################################################
+
+GuildHouse.Log.Enable = 1
+
+###################################################################################################
+# CUSTO DAS MELHORIAS EM GOLD/COPPER
+###################################################################################################
+
+GuildHouseMailbox = 500000
+GuildHouseInnKeeper = 1000000
+GuildHouseBank = 1000000
+GuildHouseAuctioneer = 1000000
+GuildHouseTrainerCost = 1000000
+GuildHouseVendor = 500000
+GuildHouseObject = 500000
+GuildHousePortal = 1000000
+GuildHouseProf = 500000
+GuildHouseSpirit = 100000
