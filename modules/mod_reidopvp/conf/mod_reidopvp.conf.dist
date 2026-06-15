@@ -1,0 +1,169 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE REI DO PVP V2 - RECOMPENSAS / FECHAMENTO
+#
+# Sistema de ranking Rei do PvP.
+#
+# O módulo contabiliza kills PvP no banco de dados:
+# - ranking geral / total
+# - ranking semanal
+# - ranking mensal
+#
+# Contabiliza ranking e entrega recompensa automática no fechamento semanal/mensal.
+###################################################################################################
+
+ReiDoPvP.Enable = 1
+
+###################################################################################################
+# PONTUAÇÃO
+###################################################################################################
+
+# Pontos por kill.
+ReiDoPvP.Score.Kill = 1
+
+# Soma morte no jogador morto.
+ReiDoPvP.Count.Death = 1
+
+# Ignora kill se killer ou vítima for GM.
+ReiDoPvP.IgnoreGM = 1
+
+# Bloqueia farm de kill matando o mesmo jogador repetidamente.
+ReiDoPvP.AntiFarm.Enable = 1
+
+# Tempo em segundos para a mesma vítima voltar a contar ponto para o mesmo killer.
+ReiDoPvP.AntiFarm.CooldownSeconds = 300
+
+###################################################################################################
+# ONDE CONTABILIZAR
+###################################################################################################
+
+# Contabilizar em world/open world.
+ReiDoPvP.Count.World.Enable = 1
+
+# Contabilizar em Battleground.
+ReiDoPvP.Count.Battleground.Enable = 1
+
+# Contabilizar em Arena.
+ReiDoPvP.Count.Arena.Enable = 1
+
+# Contabilizar apenas em mapas específicos.
+# Exemplo: "0 1 530 571"
+ReiDoPvP.Count.Map.Enable = 0
+ReiDoPvP.Count.Map.Ids = ""
+
+# Contabilizar apenas em zonas específicas.
+# Exemplo: "14 85 1497"
+ReiDoPvP.Count.Zone.Enable = 0
+ReiDoPvP.Count.Zone.Ids = ""
+
+###################################################################################################
+# RESET AUTOMÁTICO SEMANAL / MENSAL
+#
+# Observação:
+# - O ranking geral nunca reseta.
+# - Semanal e mensal resetam conforme config.
+# - DayOfWeek usa padrão MySQL:
+#   1 = Domingo
+#   2 = Segunda
+#   3 = Terça
+#   4 = Quarta
+#   5 = Quinta
+#   6 = Sexta
+#   7 = Sábado
+###################################################################################################
+
+ReiDoPvP.Reset.CheckIntervalSeconds = 60
+
+ReiDoPvP.Reset.Weekly.Enable = 1
+ReiDoPvP.Reset.Weekly.DayOfWeek = 2
+ReiDoPvP.Reset.Weekly.Hour = 0
+ReiDoPvP.Reset.Weekly.Minute = 0
+ReiDoPvP.Reset.Weekly.Announce = 1
+ReiDoPvP.Reset.Weekly.Message = "|cffff2020[ZoeCore]|r Ranking semanal do Rei do PvP foi resetado!"
+
+ReiDoPvP.Reset.Monthly.Enable = 1
+ReiDoPvP.Reset.Monthly.DayOfMonth = 1
+ReiDoPvP.Reset.Monthly.Hour = 0
+ReiDoPvP.Reset.Monthly.Minute = 0
+ReiDoPvP.Reset.Monthly.Announce = 1
+ReiDoPvP.Reset.Monthly.Message = "|cffff2020[ZoeCore]|r Ranking mensal do Rei do PvP foi resetado!"
+
+
+
+###################################################################################################
+# RECOMPENSAS AUTOMÁTICAS
+#
+# Funcionamento:
+# - No fechamento semanal/mensal, o módulo grava a recompensa como pendente no banco.
+# - Quando o vencedor logar, a recompensa é entregue automaticamente.
+# - Isso evita perder recompensa se o jogador estiver offline na hora do fechamento.
+#
+# Se ItemEntry = 0, não entrega item.
+# Se Honor = 0, não entrega honor.
+# Se Arena = 0, não entrega arena points.
+###################################################################################################
+
+ReiDoPvP.Reward.DeliverOnLogin = 1
+
+ReiDoPvP.Reward.Weekly.Enable = 1
+ReiDoPvP.Reward.Weekly.MinScore = 1
+ReiDoPvP.Reward.Weekly.ItemEntry = 900001
+ReiDoPvP.Reward.Weekly.ItemCount = 50
+ReiDoPvP.Reward.Weekly.Honor = 500
+ReiDoPvP.Reward.Weekly.Arena = 0
+ReiDoPvP.Reward.Weekly.Description = "50 Fragmentos Cruéis + 500 Honor"
+ReiDoPvP.Reward.Weekly.DeliveredMessage = "|cff00FFFF[Rei do PvP]|r Você recebeu sua recompensa semanal do Rei do PvP!"
+
+ReiDoPvP.Reward.Monthly.Enable = 1
+ReiDoPvP.Reward.Monthly.MinScore = 1
+ReiDoPvP.Reward.Monthly.ItemEntry = 900001
+ReiDoPvP.Reward.Monthly.ItemCount = 200
+ReiDoPvP.Reward.Monthly.Honor = 2000
+ReiDoPvP.Reward.Monthly.Arena = 100
+ReiDoPvP.Reward.Monthly.Description = "200 Fragmentos Cruéis + 2000 Honor + 100 Arena Points"
+ReiDoPvP.Reward.Monthly.DeliveredMessage = "|cff00FFFF[Rei do PvP]|r Você recebeu sua recompensa mensal do Rei do PvP!"
+
+###################################################################################################
+# NPC REI DO PVP
+###################################################################################################
+
+ReiDoPvP.Npc.Enable = 1
+ReiDoPvP.Npc.Entry = 500090
+
+# Atualiza o creature_template do NPC com o nome do Rei atual.
+# Exemplo:
+# name = Wolf
+# subname = Rei do PvP
+#
+# Observação:
+# A alteração de nome/modelo no template fica no banco e pode precisar de reload/restart
+# para atualizar visualmente caso o NPC já esteja carregado no mapa.
+ReiDoPvP.Npc.UpdateTemplate.Enable = 1
+ReiDoPvP.Npc.UpdateTemplate.SubName = "Rei do PvP"
+
+# Usa modelo do treinador de classe correspondente ao vencedor.
+ReiDoPvP.Npc.UseClassTrainerModel = 1
+
+# Entries de treinadores usados como referência de modelo por classe.
+ReiDoPvP.Npc.TrainerModel.Warrior = 26332
+ReiDoPvP.Npc.TrainerModel.Paladin = 26327
+ReiDoPvP.Npc.TrainerModel.Hunter = 26325
+ReiDoPvP.Npc.TrainerModel.Rogue = 26329
+ReiDoPvP.Npc.TrainerModel.Priest = 26328
+ReiDoPvP.Npc.TrainerModel.DeathKnight = 29195
+ReiDoPvP.Npc.TrainerModel.Shaman = 26330
+ReiDoPvP.Npc.TrainerModel.Mage = 26326
+ReiDoPvP.Npc.TrainerModel.Warlock = 26331
+ReiDoPvP.Npc.TrainerModel.Druid = 26324
+
+# Modelo fallback caso não encontre o modelo do trainer.
+ReiDoPvP.Npc.ModelFallback = 25901
+
+###################################################################################################
+# TEXTOS DO NPC
+###################################################################################################
+
+ReiDoPvP.Npc.RewardText.Total = "Top Rei do PvP: prestígio eterno no ranking geral."
+ReiDoPvP.Npc.RewardText.Weekly = "Rei do PvP Semanal: vencedor anunciado semanalmente."
+ReiDoPvP.Npc.RewardText.Monthly = "Rei do PvP Mensal: vencedor anunciado mensalmente."
