@@ -1,0 +1,132 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE BG TOP V5 - BROADCAST COMPILE FIX
+#
+# Convertido do script Lua:
+# - 02-Expert_BG_Announce.lua
+#
+# Recursos:
+# - Anúncio ao finalizar Battleground
+# - Top Killing Blows
+# - Top Damage
+# - Top Healing
+# - Top Honorable Kills
+# - Top Honor
+# - Top Deaths
+# - Ranking total / semanal / mensal
+# - NPC de consulta
+# - Comandos .bgtop
+# - Reset semanal / mensal configurável
+#
+# Observação:
+# Este módulo usa as tabelas pvpstats do AzerothCore:
+# - pvpstats_battlegrounds
+# - pvpstats_players
+###################################################################################################
+
+BGTop.Enable = 1
+
+###################################################################################################
+# PROCESSAMENTO
+###################################################################################################
+
+# Delay após finalizar BG para aguardar o pvpstats salvar no banco.
+BGTop.Process.DelayMs = 1500
+
+# Quantidade máxima de BGs processadas por ciclo.
+BGTop.Process.MaxBattlegroundsPerCycle = 10
+
+# Processamento automático em background.
+# Isso garante o anúncio mesmo se o hook de fim da BG não agendar corretamente
+# ou se o pvpstats salvar os dados alguns segundos depois.
+BGTop.Process.Background.Enable = 1
+BGTop.Process.Background.IntervalSeconds = 5
+
+# Logs no console do worldserver.
+BGTop.Log.Enable = 1
+
+
+###################################################################################################
+# ANÚNCIO DE FINAL DE BG
+###################################################################################################
+
+BGTop.Announce.Enable = 1
+
+# Anunciar no world chat.
+BGTop.Announce.World = 1
+
+# Modo de envio:
+# 0 = ServerMessage padrão
+# 1 = SysMessage por jogador online, melhor para renderizar ícones |T...|t
+BGTop.Announce.SendMode = 1
+
+# Mensagem do anúncio.
+# Use |n no texto para quebrar em linhas separadas no chat.
+# Use textura com barra normal: Interface/PVPFrame/...
+# Placeholders:
+# {bg}, {winner}, {top_kill}, {top_kill_value}, {top_damage}, {top_damage_value},
+# {top_heal}, {top_heal_value}, {top_hk}, {top_hk_value}, {top_honor}, {top_honor_value},
+# {top_deaths}, {top_deaths_value}
+BGTop.Announce.Message = "|cffFFA500[BG - {bg}]: {winner} |n|cffff0000Top Kill: {top_kill} ({top_kill_value})|r |n|cffD2691ETop Damage: {top_damage} ({top_damage_value})|r |n|cff00FF7FTop Heal: {top_heal} ({top_heal_value})|r |n|cff6495EDTop Honor: {top_honor} ({top_honor_value})|r"
+
+BGTop.Announce.WinnerAlliance = "|TInterface/PVPFrame/PVP-Currency-Alliance:18:18:0:-2|t|cff00ccffAlianca Win!|r"
+BGTop.Announce.WinnerHorde = "|TInterface/PVPFrame/PVP-Currency-Horde:18:18:0:-2|t|cffff6060Horda Win!|r"
+BGTop.Announce.WinnerUnknown = "|cffffffffSem vencedor|r"
+
+###################################################################################################
+# RANKINGS
+###################################################################################################
+
+BGTop.Ranking.Total.Enable = 1
+BGTop.Ranking.Weekly.Enable = 1
+BGTop.Ranking.Monthly.Enable = 1
+
+# Top exibido no NPC/comando.
+BGTop.Ranking.ShowLimit = 10
+
+###################################################################################################
+# RESET SEMANAL / MENSAL
+#
+# DayOfWeek usa padrão MySQL:
+# 1 = Domingo
+# 2 = Segunda
+# 3 = Terça
+# 4 = Quarta
+# 5 = Quinta
+# 6 = Sexta
+# 7 = Sábado
+###################################################################################################
+
+BGTop.Reset.CheckIntervalSeconds = 60
+
+BGTop.Reset.Weekly.Enable = 1
+BGTop.Reset.Weekly.DayOfWeek = 2
+BGTop.Reset.Weekly.Hour = 0
+BGTop.Reset.Weekly.Minute = 0
+BGTop.Reset.Weekly.Announce = 1
+BGTop.Reset.Weekly.Message = "|cffFFA500[BG Top]|r Ranking semanal de BG foi resetado!"
+
+BGTop.Reset.Monthly.Enable = 1
+BGTop.Reset.Monthly.DayOfMonth = 1
+BGTop.Reset.Monthly.Hour = 0
+BGTop.Reset.Monthly.Minute = 0
+BGTop.Reset.Monthly.Announce = 1
+BGTop.Reset.Monthly.Message = "|cffFFA500[BG Top]|r Ranking mensal de BG foi resetado!"
+
+###################################################################################################
+# NPC
+###################################################################################################
+
+BGTop.Npc.Enable = 1
+BGTop.Npc.Entry = 500095
+
+BGTop.Npc.Title = "BG Top"
+BGTop.Npc.SubName = "Ranking Battleground"
+
+###################################################################################################
+# TEXTOS
+###################################################################################################
+
+BGTop.Text.NextWeeklyReset = "Próximo reset semanal"
+BGTop.Text.NextMonthlyReset = "Próximo reset mensal"
