@@ -1,0 +1,123 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE NPC PROFESSIONS V1
+#
+# Atualização do módulo antigo mod-npc-professions para core atual.
+#
+# Recursos:
+# - NPC de profissões
+# - Aprende profissão + todas as receitas possíveis
+# - Vendor de reagentes por profissão
+# - Acesso principal por item VIP configurável
+# - Acesso do vendor por item VIP configurável
+# - Limite de profissões primárias normal/VIP configurável
+#
+###################################################################################################
+
+ProfessionsNPC.Enable = 1
+
+# Entry do NPC principal.
+ProfessionsNPC.Npc.Entry = 100011
+
+# Mensagem gossip padrão.
+ProfessionsNPC.Npc.GossipTextId = 60005
+
+# Skill máxima aplicada ao aprender profissão.
+ProfessionsNPC.Skill.MaxValue = 450
+
+###################################################################################################
+# ACESSO AO NPC PRINCIPAL
+###################################################################################################
+
+# Se ativado, só abre o NPC se o player tiver o item VIP.
+ProfessionsNPC.Access.VipOnly.Enable = 0
+
+# Item VIP principal.
+ProfessionsNPC.Access.Vip.ItemEntry = 33564
+
+# Item VIP alternativo. Use 0 para desativar.
+ProfessionsNPC.Access.Vip.ItemEntry2 = 33565
+
+# Considerar item no banco.
+ProfessionsNPC.Access.Vip.IncludeBank = 1
+
+# GM pode abrir mesmo sem item.
+ProfessionsNPC.Access.AllowGM = 1
+
+ProfessionsNPC.Access.DenyMessage = "|cffff2020[Profissões]|r Você precisa do item VIP para usar este NPC."
+
+###################################################################################################
+# VENDOR DE REAGENTES
+###################################################################################################
+
+ProfessionsNPC.Vendor.Enable = 1
+
+# Se ativado, só abre o vendor de reagentes se tiver item VIP.
+ProfessionsNPC.Vendor.VipOnly.Enable = 0
+
+ProfessionsNPC.Vendor.Vip.ItemEntry = 33564
+ProfessionsNPC.Vendor.Vip.ItemEntry2 = 33565
+ProfessionsNPC.Vendor.Vip.IncludeBank = 1
+ProfessionsNPC.Vendor.AllowGM = 1
+
+ProfessionsNPC.Vendor.DenyMessage = "|cffff2020[Profissões]|r Você precisa do item VIP para abrir o vendor de reagentes."
+
+###################################################################################################
+# LIMITE DE PROFISSÕES PRIMÁRIAS
+###################################################################################################
+
+# Limite normal de profissões primárias.
+ProfessionsNPC.Primary.MaxNormal = 2
+
+# Limite VIP de profissões primárias.
+ProfessionsNPC.Primary.MaxVip = 3
+
+# Item que libera limite VIP de profissões.
+# Use 0 para usar os itens de acesso VIP.
+ProfessionsNPC.Primary.Vip.ItemEntry = 33565
+ProfessionsNPC.Primary.Vip.ItemEntry2 = 0
+ProfessionsNPC.Primary.Vip.IncludeBank = 1
+
+ProfessionsNPC.Primary.MaxMessage = "|cffff2020[Profissões]|r Você já treinou o máximo de profissões primárias."
+
+###################################################################################################
+# MENU
+###################################################################################################
+
+ProfessionsNPC.Menu.ShowPrimary = 1
+ProfessionsNPC.Menu.ShowSecondary = 1
+ProfessionsNPC.Menu.ShowReagentVendor = 1
+
+ProfessionsNPC.Message.AlreadyKnown = "|cffffcc00[Profissões]|r Você já conhece esta profissão."
+ProfessionsNPC.Message.Learned = "|cff00ff00[Profissões]|r Profissão treinada com sucesso."
+ProfessionsNPC.Message.Error = "|cffff2020[Profissões]|r Ocorreu um erro interno ao treinar a profissão."
+
+
+###################################################################################################
+# VISUAL DO MENU
+#
+# Ajuste para deixar os ícones alinhados no canto esquerdo igual ao NPC de transmog.
+###################################################################################################
+
+ProfessionsNPC.Menu.IconSize = 30
+ProfessionsNPC.Menu.IconOffsetX = -18
+ProfessionsNPC.Menu.IconOffsetY = 0
+
+
+
+###################################################################################################
+# CABEÇALHOS DO MENU
+#
+# Na V3 os cabeçalhos "Profissões Primárias" e "Profissões Secundárias" foram removidos
+# para deixar o menu mais limpo. As opções abaixo continuam controlando se o grupo aparece.
+###################################################################################################
+
+# Mantém as profissões primárias no menu.
+ProfessionsNPC.Menu.ShowPrimary = 1
+
+# Mantém as profissões secundárias no menu.
+ProfessionsNPC.Menu.ShowSecondary = 1
+
+# Reservado para versão futura. Na V3 fica removido no código.
+ProfessionsNPC.Menu.ShowCategoryHeaders = 0
