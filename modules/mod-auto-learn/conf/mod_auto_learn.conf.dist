@@ -1,0 +1,97 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE AUTO LEARN V1
+#
+# Módulo criado a partir do antigo NPC LearnSpells.
+#
+# Objetivo:
+# - Ao logar, treinar automaticamente spells, talentos, skills, armas e montarias.
+# - Sem necessidade de NPC.
+#
+###################################################################################################
+
+AutoLearn.Enable = 1
+
+# Aplica no login.
+# Para personagem novo, isso acontece no primeiro login logo após a criação.
+AutoLearn.OnLogin.Enable = 1
+
+# Aplica apenas uma vez por personagem.
+# Se quiser reaplicar sempre que logar, coloque 0.
+AutoLearn.OnlyOnce = 1
+
+# Versão do pacote de aprendizado.
+# Se mudar para 2, personagens já marcados como versão 1 recebem novamente.
+AutoLearn.Version = 1
+
+# Delay no login em milissegundos.
+AutoLearn.DelayMs = 1500
+
+# Nível mínimo para aplicar.
+# 0 = qualquer nível.
+AutoLearn.MinLevel = 0
+
+###################################################################################################
+# SPELLS / CLASSE
+###################################################################################################
+
+AutoLearn.ClassSpells.Enable = 1
+
+# Usa as listas extraídas do NPC antigo.
+AutoLearn.LegacyNpcSpellLists.Enable = 1
+
+###################################################################################################
+# TALENTOS
+###################################################################################################
+
+AutoLearn.Talents.Enable = 1
+
+# Quantas vezes repetir o processo de aprender todos os talentos.
+# O NPC antigo fazia 3 loops; por isso o padrão é 3.
+AutoLearn.Talents.Passes = 3
+
+# Zera pontos livres após treinar talentos.
+AutoLearn.Talents.ClearFreePoints = 1
+
+# Cast visual/refresh antigo usado pelo script original.
+AutoLearn.Talents.CastRefreshSpell = 1
+AutoLearn.Talents.RefreshSpellId = 36400
+
+###################################################################################################
+# DUAL SPEC
+###################################################################################################
+
+AutoLearn.DualSpec.Enable = 1
+AutoLearn.DualSpec.CastSpells = 1
+
+###################################################################################################
+# SKILLS / ARMAS / MONTARIAS
+###################################################################################################
+
+# Aprende skills gerais de armas/armor/defesa usadas no módulo antigo.
+AutoLearn.WeaponSkills.Enable = 1
+
+# Aprende riding e Cold Weather Flying.
+AutoLearn.Riding.Enable = 1
+
+# Max skill para o nível do personagem.
+AutoLearn.MaxSkills.Enable = 1
+
+###################################################################################################
+# MENSAGENS
+###################################################################################################
+
+AutoLearn.Announce.Enable = 1
+AutoLearn.Message.Done = "|cff00FFFF[ZoeCore]|r Suas spells, talentos e skills foram treinadas automaticamente."
+AutoLearn.Message.AlreadyDone = "|cff00FFFF[ZoeCore]|r Seu personagem já recebeu o treinamento automático."
+
+###################################################################################################
+# COMANDOS
+#
+# .autolearn info
+# .autolearn apply
+# .autolearn reset
+###################################################################################################
+
+AutoLearn.Commands.Enable = 1
