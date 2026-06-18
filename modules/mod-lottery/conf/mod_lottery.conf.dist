@@ -1,0 +1,152 @@
+[worldserver]
+
+###################################################################################################
+# ZOECORE LOTERIA V2
+#
+# Sistema premium de loteria:
+# - Mega-Sena automática e manual
+# - Número da Sorte automático e manual
+# - Jackpot acumulado
+# - Histórico de sorteios
+# - Ranking dos ganhadores
+# - Avisos antes do sorteio
+# - Prêmios múltiplos por item
+# - Menu NPC visual melhorado
+###################################################################################################
+
+Lottery.Enable = 1
+
+
+# Moeda usada para comprar bilhetes.
+# Use item entry da moeda do seu servidor.
+Lottery.Currency.ItemEntry = 900001
+
+# Quantidade da moeda cobrada por bilhete.
+Lottery.Currency.Mega.ItemCount = 10
+Lottery.Currency.Lucky.ItemCount = 5
+
+# Mensagens.
+Lottery.Message.Prefix = "|cff00FFFF[ZoeCore Loteria]|r"
+Lottery.Announce.World.Enable = 1
+
+###################################################################################################
+# MEGA-SENA
+###################################################################################################
+
+Lottery.Mega.Enable = 1
+
+# Quantidade de números por bilhete.
+Lottery.Mega.PickCount = 6
+
+# Faixa dos números.
+Lottery.Mega.MinNumber = 1
+Lottery.Mega.MaxNumber = 60
+
+
+# Limite de bilhetes por jogador por rodada.
+Lottery.Mega.MaxTicketsPerPlayer = 10
+
+# Intervalo entre sorteios.
+Lottery.Mega.DrawIntervalMinutes = 1440
+
+# Prêmios múltiplos.
+# Formato: itemEntry:count,itemEntry:count
+Lottery.Mega.Prize.Match6.Items = "900001:1000"
+Lottery.Mega.Prize.Match5.Items = "900001:250"
+Lottery.Mega.Prize.Match4.Items = "900001:75"
+Lottery.Mega.Prize.Match3.Items = ""
+
+# Compatibilidade com V1, usado só se .Items estiver vazio.
+Lottery.Mega.Prize.Match6.ItemEntry = 900001
+Lottery.Mega.Prize.Match6.ItemCount = 1000
+Lottery.Mega.Prize.Match5.ItemEntry = 900001
+Lottery.Mega.Prize.Match5.ItemCount = 250
+Lottery.Mega.Prize.Match4.ItemEntry = 900001
+Lottery.Mega.Prize.Match4.ItemCount = 75
+
+###################################################################################################
+# JACKPOT MEGA-SENA
+###################################################################################################
+
+Lottery.Mega.Jackpot.Enable = 1
+
+# Item do jackpot.
+Lottery.Mega.Jackpot.ItemEntry = 900001
+
+# Valor inicial quando o jackpot reseta.
+Lottery.Mega.Jackpot.StartCount = 500
+
+# Percentual do custo do bilhete que entra no jackpot.
+# Exemplo: custo 10, percent 80 = 8 entram no jackpot.
+Lottery.Mega.Jackpot.PercentFromTicketCost = 80
+
+# Se houver mais de um ganhador com 6 acertos, divide o jackpot entre eles.
+Lottery.Mega.Jackpot.SplitBetweenWinners = 1
+
+###################################################################################################
+# NÚMERO DA SORTE
+###################################################################################################
+
+Lottery.Lucky.Enable = 1
+
+# Faixa do número.
+Lottery.Lucky.MinNumber = 1
+Lottery.Lucky.MaxNumber = 9999
+
+
+# Limite de bilhetes por jogador por rodada.
+Lottery.Lucky.MaxTicketsPerPlayer = 20
+
+# Intervalo entre sorteios.
+Lottery.Lucky.DrawIntervalMinutes = 1440
+
+# Prêmio múltiplo do número exato.
+Lottery.Lucky.Prize.Items = "900001:500"
+
+# Compatibilidade V1, usado só se .Items estiver vazio.
+Lottery.Lucky.Prize.ItemEntry = 900001
+Lottery.Lucky.Prize.ItemCount = 500
+
+###################################################################################################
+# JACKPOT NÚMERO DA SORTE
+###################################################################################################
+
+Lottery.Lucky.Jackpot.Enable = 1
+Lottery.Lucky.Jackpot.ItemEntry = 900001
+Lottery.Lucky.Jackpot.StartCount = 250
+Lottery.Lucky.Jackpot.PercentFromTicketCost = 80
+Lottery.Lucky.Jackpot.SplitBetweenWinners = 1
+
+###################################################################################################
+# HISTÓRICO / RANKING
+###################################################################################################
+
+Lottery.History.ShowLast = 10
+Lottery.Ranking.TopLimit = 10
+
+###################################################################################################
+# AVISOS ANTES DO SORTEIO
+#
+# Minutos separados por vírgula.
+# Cada aviso é enviado uma vez por rodada.
+###################################################################################################
+
+Lottery.Announce.BeforeDraw.Enable = 1
+Lottery.Announce.BeforeDraw.Minutes = "60,30,10,5,1"
+
+###################################################################################################
+# PROCESSAMENTO AUTOMÁTICO
+###################################################################################################
+
+Lottery.AutoDraw.Enable = 1
+Lottery.AutoDraw.CheckIntervalSeconds = 30
+
+###################################################################################################
+# COMANDOS
+#
+# .lottery info
+# .lottery drawmega
+# .lottery drawlucky
+###################################################################################################
+
+Lottery.Commands.Enable = 1
