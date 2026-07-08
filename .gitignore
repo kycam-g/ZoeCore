@@ -5,12 +5,12 @@
 .cache
 /conf/*
 !/conf/dist
-/modules/*
-!/modules/*.md
-!/modules/*.sh
-!/modules/CMakeLists.txt
-!/modules/*.h
-!/modules/*.cmake
+#/modules/*
+#!/modules/*.md
+#!/modules/*.sh
+#!/modules/CMakeLists.txt
+#!/modules/*.h
+#!/modules/*.cmake
 /build*/
 /var/*
 !/var/build/.gitkeep
@@ -114,3 +114,8 @@ local.properties
 #  !modules/yourmodule
 #
 # ==================
+!modules/mod-player-tags
+!modules/mod-cfbg
+!modules/mod-arena-3v3-solo-queue
+!modules/mod-ale
+!modules/mod-1v1-arena
