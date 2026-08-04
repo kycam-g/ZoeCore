@@ -1,9 +1,14 @@
 # ZoeCore
 
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+[![CodeFactor](https://www.codefactor.io/repository/github/azerothcore/azerothcore-wotlk/badge)](https://www.codefactor.io/repository/github/azerothcore/azerothcore-wotlk)
+[![Discord](https://img.shields.io/discord/217589275766685707?logo=discord&logoColor=white)](https://discord.gg/gkt4y2x "Our community hub on Discord")
+
 <p align="center">
   <strong>AzerothCore WotLK 3.3.5a Custom Core</strong><br>
   Base profissional para servidor World of Warcraft Wrath of the Lich King 3.3.5a com foco em módulos, scripts custom, SQL custom, PvP, eventos, bosses e sistemas exclusivos.
 </p>
+
 
 <p align="center">
   <img src="https://img.shields.io/badge/Base-AzerothCore-blue?style=for-the-badge" alt="AzerothCore">
