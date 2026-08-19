@@ -86,6 +86,10 @@ Responsável pelas customizações, organização, expansão e implementação d
 | AzerothCore | Base principal do emulador |
 | WotLK 3.3.5a | Versão alvo do servidor |
 
+🤖 If you use any AI agent to work on AzerothCore, please read our [AI Agentic Engineering guidelines](https://www.azerothcore.org/wiki/agentic-engineering).
+
+Click on the "⭐ Star" button to help us gain more visibility on GitHub!
+
 ---
 
 ## 📁 Estrutura principal do projeto
