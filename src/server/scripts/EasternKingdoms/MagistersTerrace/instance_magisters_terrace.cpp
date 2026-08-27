@@ -16,10 +16,69 @@
  */
 
 #include "CreatureScript.h"
+#include "DatabaseEnv.h"
 #include "InstanceMapScript.h"
 #include "InstanceScript.h"
+#include "Item.h"
+#include "Mail.h"
+#include "Player.h"
 #include "ScriptedCreature.h"
 #include "magisters_terrace.h"
+#include <array>
+
+namespace
+{
+    constexpr uint32 ITEM_EMBLEM_OF_CRUEL_CONQUEST = 45229;
+    constexpr uint32 NPC_THE_POSTMASTER = 34337;
+
+    constexpr std::array<uint32, MAX_ENCOUNTER> EMBLEM_REWARDS =
+    {
+        3, // Selin Fireheart
+        3, // Vexallus
+        4, // Priestess Delrissa
+        7  // Kael'thas Sunstrider
+    };
+
+    void SendEmblemsByMail(Player* player, uint32 count)
+    {
+        Item* item = Item::CreateItem(ITEM_EMBLEM_OF_CRUEL_CONQUEST, count, player);
+        if (!item)
+            return;
+
+        CharacterDatabaseTransaction transaction = CharacterDatabase.BeginTransaction();
+        item->SaveToDB(transaction);
+
+        MailDraft("Emblemas recuperados",
+            "Suas bolsas estavam cheias. Os Emblemas da Conquista Cruel conquistados foram enviados em anexo.")
+            .AddItem(item)
+            .SendMailTo(transaction, MailReceiver(player), MailSender(MAIL_CREATURE, NPC_THE_POSTMASTER));
+
+        CharacterDatabase.CommitTransaction(transaction);
+    }
+
+    void RewardEmblems(Player* player, uint32 count)
+    {
+        uint32 noSpaceForCount = 0;
+        ItemPosCountVec destination;
+        InventoryResult result = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, destination,
+            ITEM_EMBLEM_OF_CRUEL_CONQUEST, count, &noSpaceForCount);
+
+        if (result != EQUIP_ERR_OK && noSpaceForCount == 0)
+            noSpaceForCount = count;
+
+        uint32 storeCount = count - noSpaceForCount;
+        if (storeCount > 0 && !destination.empty())
+        {
+            if (Item* item = player->StoreNewItem(destination, ITEM_EMBLEM_OF_CRUEL_CONQUEST, true))
+                player->SendNewItem(item, storeCount, true, false);
+            else
+                noSpaceForCount += storeCount;
+        }
+
+        if (noSpaceForCount > 0)
+            SendEmblemsByMail(player, noSpaceForCount);
+    }
+}
 
 ObjectData const creatureData[] =
 {
@@ -62,7 +121,7 @@ Position const KalecgosSpawnPos = { 164.3747f, -397.1197f, 2.151798f, 1.66219f }
 class instance_magisters_terrace : public InstanceMapScript
 {
 public:
-    instance_magisters_terrace() : InstanceMapScript("instance_magisters_terrace", MAP_MAGISTERS_TERRACE) { }
+    instance_magisters_terrace() : InstanceMapScript("instance_magisters_terrace", MAP_MAGISTERS_TERRACE) {}
 
     struct instance_magisters_terrace_InstanceMapScript : public InstanceScript
     {
@@ -82,15 +141,33 @@ public:
             if (eventId == EVENT_SPAWN_KALECGOS)
                 if (!GetCreature(DATA_KALECGOS) && !scheduler.IsGroupScheduled(DATA_KALECGOS))
                 {
-                    scheduler.Schedule(1min, 1min, DATA_KALECGOS,[this](TaskContext)
-                    {
-                        if (Creature* kalecgos = instance->SummonCreature(NPC_KALECGOS, KalecgosSpawnPos))
+                    scheduler.Schedule(1min, 1min, DATA_KALECGOS, [this](TaskContext)
                         {
-                            kalecgos->GetMotionMaster()->MoveWaypoint(PATH_KALECGOS_FLIGHT, false);
-                            kalecgos->AI()->Talk(SAY_KALECGOS_SPAWN);
-                        }
-                    });
+                            if (Creature* kalecgos = instance->SummonCreature(NPC_KALECGOS, KalecgosSpawnPos))
+                            {
+                                kalecgos->GetMotionMaster()->MoveWaypoint(PATH_KALECGOS_FLIGHT, false);
+                                kalecgos->AI()->Talk(SAY_KALECGOS_SPAWN);
+                            }
+                        });
                 }
+        }
+
+        bool SetBossState(uint32 id, EncounterState state) override
+        {
+            if (!InstanceScript::SetBossState(id, state))
+                return false;
+
+            if (state != DONE || !instance->IsHeroic() || id >= EMBLEM_REWARDS.size())
+                return true;
+
+            uint32 reward = EMBLEM_REWARDS[id];
+            instance->DoForAllPlayers([reward](Player* player)
+                {
+                    if (!player->IsGameMaster())
+                        RewardEmblems(player, reward);
+                });
+
+            return true;
         }
     };
 
