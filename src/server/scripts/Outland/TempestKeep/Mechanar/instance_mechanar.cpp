@@ -15,9 +15,69 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "DatabaseEnv.h"
 #include "InstanceMapScript.h"
 #include "InstanceScript.h"
+#include "Item.h"
+#include "Mail.h"
+#include "Player.h"
 #include "mechanar.h"
+#include <array>
+
+namespace
+{
+    constexpr uint32 ITEM_EMBLEM_OF_CRUEL_CONQUEST = 45229;
+    constexpr uint32 NPC_THE_POSTMASTER = 34337;
+
+    constexpr std::array<uint32, MAX_ENCOUNTER> EMBLEM_REWARDS =
+    {
+        2, // Gatewatcher Gyro-Kill
+        2, // Gatewatcher Iron-Hand
+        3, // Mechano-Lord Capacitus
+        4, // Nethermancer Sepethrea
+        6  // Pathaleon the Calculator
+    };
+
+    void SendEmblemsByMail(Player* player, uint32 count)
+    {
+        Item* item = Item::CreateItem(ITEM_EMBLEM_OF_CRUEL_CONQUEST, count, player);
+        if (!item)
+            return;
+
+        CharacterDatabaseTransaction transaction = CharacterDatabase.BeginTransaction();
+        item->SaveToDB(transaction);
+
+        MailDraft("Emblemas recuperados",
+            "Suas bolsas estavam cheias. Os Emblemas da Conquista Cruel conquistados foram enviados em anexo.")
+            .AddItem(item)
+            .SendMailTo(transaction, MailReceiver(player), MailSender(MAIL_CREATURE, NPC_THE_POSTMASTER));
+
+        CharacterDatabase.CommitTransaction(transaction);
+    }
+
+    void RewardEmblems(Player* player, uint32 count)
+    {
+        uint32 noSpaceForCount = 0;
+        ItemPosCountVec destination;
+        InventoryResult result = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, destination,
+            ITEM_EMBLEM_OF_CRUEL_CONQUEST, count, &noSpaceForCount);
+
+        if (result != EQUIP_ERR_OK && noSpaceForCount == 0)
+            noSpaceForCount = count;
+
+        uint32 storeCount = count - noSpaceForCount;
+        if (storeCount > 0 && !destination.empty())
+        {
+            if (Item* item = player->StoreNewItem(destination, ITEM_EMBLEM_OF_CRUEL_CONQUEST, true))
+                player->SendNewItem(item, storeCount, true, false);
+            else
+                noSpaceForCount += storeCount;
+        }
+
+        if (noSpaceForCount > 0)
+            SendEmblemsByMail(player, noSpaceForCount);
+    }
+}
 
 static DoorData const doorData[] =
 {
@@ -30,7 +90,7 @@ static DoorData const doorData[] =
 class instance_mechanar : public InstanceMapScript
 {
 public:
-    instance_mechanar(): InstanceMapScript("instance_mechanar", MAP_TEMPEST_KEEP_THE_MECHANAR) { }
+    instance_mechanar() : InstanceMapScript("instance_mechanar", MAP_TEMPEST_KEEP_THE_MECHANAR) {}
 
     struct instance_mechanar_InstanceMapScript : public InstanceScript
     {
@@ -47,13 +107,13 @@ public:
         {
             switch (gameObject->GetEntry())
             {
-                case GO_DOOR_MOARG_1:
-                case GO_DOOR_MOARG_2:
-                case GO_DOOR_NETHERMANCER:
-                    AddDoor(gameObject);
-                    break;
-                default:
-                    break;
+            case GO_DOOR_MOARG_1:
+            case GO_DOOR_MOARG_2:
+            case GO_DOOR_NETHERMANCER:
+                AddDoor(gameObject);
+                break;
+            default:
+                break;
             }
         }
 
@@ -61,13 +121,13 @@ public:
         {
             switch (gameObject->GetEntry())
             {
-                case GO_DOOR_MOARG_1:
-                case GO_DOOR_MOARG_2:
-                case GO_DOOR_NETHERMANCER:
-                    RemoveDoor(gameObject);
-                    break;
-                default:
-                    break;
+            case GO_DOOR_MOARG_1:
+            case GO_DOOR_MOARG_2:
+            case GO_DOOR_NETHERMANCER:
+                RemoveDoor(gameObject);
+                break;
+            default:
+                break;
             }
         }
 
@@ -75,6 +135,24 @@ public:
         {
             if (creature->GetEntry() == NPC_PATHALEON_THE_CALCULATOR)
                 _pathaleonGUID = creature->GetGUID();
+        }
+
+        bool SetBossState(uint32 id, EncounterState state) override
+        {
+            if (!InstanceScript::SetBossState(id, state))
+                return false;
+
+            if (state != DONE || !instance->IsHeroic() || id >= EMBLEM_REWARDS.size())
+                return true;
+
+            uint32 reward = EMBLEM_REWARDS[id];
+            instance->DoForAllPlayers([reward](Player* player)
+                {
+                    if (!player->IsGameMaster())
+                        RewardEmblems(player, reward);
+                });
+
+            return true;
         }
 
     private:
