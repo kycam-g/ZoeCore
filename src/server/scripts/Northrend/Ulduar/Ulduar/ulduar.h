@@ -65,6 +65,7 @@ enum UlduarData
     DATA_REPAIR_STATION2                    = 104,
     DATA_UNBROKEN_ACHIEVEMENT               = 105,
     DATA_LEVIATHAN_DOORS                    = 106,
+    DATA_LEVIATHAN_VEHICLES_USABLE          = 107,
 
     // Mimiron creatures
     DATA_MIMIRON_LEVIATHAN_MKII             = 301,
@@ -356,6 +357,8 @@ enum UlduarPersistentData
     PERSISTENT_DATA_C_OF_ULDUAR_MASK,
     PERSISTENT_DATA_MAGE_BARRIER,
     PERSISTENT_DATA_ALGALON_FIRST_PULL,
+    // Set when Brann's action list unlocks the salvaged vehicles, they stay boardable for the rest of the lockout
+    PERSISTENT_DATA_LEVIATHAN_VEHICLES_USABLE,
     MAX_PERSISTENT_DATA
 };
 
@@ -365,6 +368,9 @@ enum UlduarMisc
     VEHICLE_POS_START                       = 0,
     VEHICLE_POS_LEVIATHAN                   = 1,
     VEHICLE_POS_NONE                        = 2,
+
+    // Stored in PERSISTENT_DATA_MAGE_BARRIER by Brann's intro script once the Kirin Tor drop the shield
+    MAGE_BARRIER_LOWERED                    = 3,
 
     // creature_summon_groups entries for the post-Leviathan outro
     SUMMON_GROUP_LEVIATHAN_OUTRO            = 0, // Brann + crew in formation (reload; also the march destinations)
