@@ -16,17 +16,77 @@
  */
 
 #include "CreatureScript.h"
+#include "DatabaseEnv.h"
 #include "GameTime.h"
 #include "InstanceMapScript.h"
 #include "InstanceScript.h"
+#include "Item.h"
+#include "Mail.h"
+#include "Player.h"
 #include "SpellScript.h"
 #include "SpellScriptLoader.h"
 #include "the_botanica.h"
+#include <array>
+
+namespace
+{
+    constexpr uint32 ITEM_EMBLEM_OF_CRUEL_CONQUEST = 45229;
+    constexpr uint32 NPC_THE_POSTMASTER = 34337;
+
+    constexpr std::array<uint32, MAX_ENCOUNTER> EMBLEM_REWARDS =
+    {
+        2, // Commander Sarannis
+        2, // High Botanist Freywinn
+        3, // Thorngrin the Tender
+        4, // Laj
+        6  // Warp Splinter
+    };
+
+    void SendEmblemsByMail(Player* player, uint32 count)
+    {
+        Item* item = Item::CreateItem(ITEM_EMBLEM_OF_CRUEL_CONQUEST, count, player);
+        if (!item)
+            return;
+
+        CharacterDatabaseTransaction transaction = CharacterDatabase.BeginTransaction();
+        item->SaveToDB(transaction);
+
+        MailDraft("Emblemas recuperados",
+            "Suas bolsas estavam cheias. Os Emblemas da Conquista Cruel conquistados foram enviados em anexo.")
+            .AddItem(item)
+            .SendMailTo(transaction, MailReceiver(player), MailSender(MAIL_CREATURE, NPC_THE_POSTMASTER));
+
+        CharacterDatabase.CommitTransaction(transaction);
+    }
+
+    void RewardEmblems(Player* player, uint32 count)
+    {
+        uint32 noSpaceForCount = 0;
+        ItemPosCountVec destination;
+        InventoryResult result = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, destination,
+            ITEM_EMBLEM_OF_CRUEL_CONQUEST, count, &noSpaceForCount);
+
+        if (result != EQUIP_ERR_OK && noSpaceForCount == 0)
+            noSpaceForCount = count;
+
+        uint32 storeCount = count - noSpaceForCount;
+        if (storeCount > 0 && !destination.empty())
+        {
+            if (Item* item = player->StoreNewItem(destination, ITEM_EMBLEM_OF_CRUEL_CONQUEST, true))
+                player->SendNewItem(item, storeCount, true, false);
+            else
+                noSpaceForCount += storeCount;
+        }
+
+        if (noSpaceForCount > 0)
+            SendEmblemsByMail(player, noSpaceForCount);
+    }
+}
 
 class instance_the_botanica : public InstanceMapScript
 {
 public:
-    instance_the_botanica() : InstanceMapScript("instance_the_botanica", MAP_TEMPEST_KEEP_THE_BOTANICA) { }
+    instance_the_botanica() : InstanceMapScript("instance_the_botanica", MAP_TEMPEST_KEEP_THE_BOTANICA) {}
 
     struct instance_the_botanica_InstanceMapScript : public InstanceScript
     {
@@ -34,6 +94,24 @@ public:
         {
             SetHeaders(DataHeader);
             SetBossNumber(MAX_ENCOUNTER);
+        }
+
+        bool SetBossState(uint32 id, EncounterState state) override
+        {
+            if (!InstanceScript::SetBossState(id, state))
+                return false;
+
+            if (state != DONE || !instance->IsHeroic() || id >= EMBLEM_REWARDS.size())
+                return true;
+
+            uint32 reward = EMBLEM_REWARDS[id];
+            instance->DoForAllPlayers([reward](Player* player)
+                {
+                    if (!player->IsGameMaster())
+                        RewardEmblems(player, reward);
+                });
+
+            return true;
         }
     };
 
@@ -107,20 +185,20 @@ class spell_botanica_shift_form_aura : public AuraScript
             uint32 form = 0;
             switch (GetFirstSchoolInMask(spellInfo->GetSchoolMask()))
             {
-                case SPELL_SCHOOL_FIRE:
-                    form = SPELL_FIRE_FORM;
-                    break;
-                case SPELL_SCHOOL_FROST:
-                    form = SPELL_FROST_FORM;
-                    break;
-                case SPELL_SCHOOL_ARCANE:
-                    form = SPELL_ARCANE_FORM;
-                    break;
-                case SPELL_SCHOOL_SHADOW:
-                    form = SPELL_SHADOW_FORM;
-                    break;
-                default:
-                    break;
+            case SPELL_SCHOOL_FIRE:
+                form = SPELL_FIRE_FORM;
+                break;
+            case SPELL_SCHOOL_FROST:
+                form = SPELL_FROST_FORM;
+                break;
+            case SPELL_SCHOOL_ARCANE:
+                form = SPELL_ARCANE_FORM;
+                break;
+            case SPELL_SCHOOL_SHADOW:
+                form = SPELL_SHADOW_FORM;
+                break;
+            default:
+                break;
             }
 
             if (form)
@@ -136,10 +214,10 @@ class spell_botanica_shift_form_aura : public AuraScript
                 uint32 const oldForm = _lastForm;
                 _lastForm = form;
                 owner->m_Events.AddEventAtOffset([owner, oldForm, form]()
-                {
-                    owner->RemoveAurasDueToSpell(oldForm);
-                    owner->CastSpell(owner, form, true);
-                }, 1ms);
+                    {
+                        owner->RemoveAurasDueToSpell(oldForm);
+                        owner->CastSpell(owner, form, true);
+                    }, 1ms);
             }
         }
 
