@@ -251,7 +251,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             }
         }
 
-        if (!foundAura)
+        if (!foundAura && !sScriptMgr->OnPlayerCanSpeakUnlearnedLanguage(sender, type, lang))
         {
             ChatHandler(this).SendNotification(LANG_NOT_LEARNED_LANGUAGE);
             recvData.rfinish();
