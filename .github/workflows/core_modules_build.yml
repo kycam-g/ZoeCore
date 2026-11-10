@@ -10,15 +10,15 @@ on:
       - synchronize
       - ready_for_review
     paths:
-      - 'src/*'
-      - 'src/common/**/*'
-      - 'src/genrev/**/*'
-      - 'src/server/*'
-      - 'src/server/apps/**/*'
-      - 'src/server/database/**/*'
-      - 'src/server/game/**/*'
-      - 'src/server/shared/**/*'
-      - 'src/tools/**/*'
+      - 'src/**'
+      - 'modules/**'
+      - 'deps/**'
+      - 'conf/dist/**'
+      - 'CMakeLists.txt'
+      - 'PreLoad.cmake'
+      - 'apps/ci/**'
+      - '.github/actions/linux-build/**'
+      - '.github/workflows/core_modules_build.yml'
 
 permissions:
   actions: write
@@ -48,13 +48,14 @@ jobs:
               CXX: clang++-18
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}-${{ matrix.compiler.CC }}-nopch-modules
-    if: github.repository == 'azerothcore/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: >-
+      contains(fromJSON('["azerothcore/azerothcore-wotlk", "kycam-g/ZoeCore"]'), github.repository)
+      && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v7
-        # This script installs a general list of modules to compile with
-        # azerothcore. This is useful for ensuring that module compilation
-        # functionality works.
-      - name: Checkout modules
+      # ZoeCore versions its modules in this repository; validate those exact sources.
+      - name: Checkout upstream compatibility modules
+        if: github.repository == 'azerothcore/azerothcore-wotlk'
         run: bash -x ./apps/ci/ci-install-modules.sh
       - uses: ./.github/actions/linux-build
         with:

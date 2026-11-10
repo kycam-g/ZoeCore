@@ -1,5 +1,9 @@
 [worldserver]
 
+# Itens de recompensa chegam pelo correio; honor e itens sao salvos juntos.
+# O cooldown entre vitimas usa contas, evitando bypass por troca de personagem.
+# A recompensa de shutdown so fica disponivel novamente ao atingir outro marco de streak.
+
 ###################################################################################################
 # ZOECORE KILLSTREAK V1
 #

@@ -87,7 +87,6 @@ namespace
             text.erase(text.begin());
     }
 
-
     bool ZoeEqualsNoCase(std::string const& left, std::string_view right)
     {
         if (left.size() != right.size())
@@ -202,7 +201,6 @@ namespace
         }
     }
 }
-
 
 void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
 {

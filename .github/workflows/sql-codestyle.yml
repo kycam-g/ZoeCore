@@ -8,6 +8,8 @@ on:
       - ready_for_review
     paths:
       - data/**
+      - apps/codestyle/codestyle-sql.py
+      - .github/workflows/sql-codestyle.yml
       - "!README.md"
       - "!docs/**"
 
@@ -21,7 +23,9 @@ jobs:
   triage:
     runs-on: ubuntu-latest
     name: SQL
-    if: github.repository == 'azerothcore/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: >-
+      contains(fromJSON('["azerothcore/azerothcore-wotlk", "kycam-g/ZoeCore"]'), github.repository)
+      && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v7
       - name: Setup python

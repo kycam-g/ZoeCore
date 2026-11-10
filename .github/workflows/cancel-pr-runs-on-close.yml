@@ -14,7 +14,7 @@ jobs:
   cancel:
     runs-on: ubuntu-latest
     name: cancel CI still running for the closed PR
-    if: github.repository == 'azerothcore/azerothcore-wotlk'
+    if: contains(fromJSON('["azerothcore/azerothcore-wotlk", "kycam-g/ZoeCore"]'), github.repository)
     steps:
       - name: Cancel workflow runs for this PR
         env:

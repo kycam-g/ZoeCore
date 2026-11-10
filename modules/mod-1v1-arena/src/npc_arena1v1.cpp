@@ -26,6 +26,7 @@
 #include "Chat.h"
 #include "npc_1v1arena.h"
 #include "WorldSessionMgr.h"
+#include "../../ZoePvPRewards.h"
 #include <array>
 #include <unordered_map>
 
@@ -408,14 +409,18 @@ namespace
         uint32 itemEntry = sConfigMgr->GetOption<uint32>("Arena1v1.Zoe.Reward." + key + ".Item", 900001);
         uint32 itemCount = sConfigMgr->GetOption<uint32>("Arena1v1.Zoe.Reward." + key + ".ItemCount", draw ? 1 : (win ? 8 : 2));
 
-        if (honor > 0)
-            player->ModifyHonorPoints(int32(honor));
+        if (!honor && !arenaPoints && (!itemEntry || !itemCount))
+            return;
 
-        if (arenaPoints > 0)
-            player->SetArenaPoints(player->GetArenaPoints() + arenaPoints);
+        ZoePvP::Reward delivery(*player);
+        if (!delivery.AddItems(itemEntry, itemCount))
+            return;
 
-        if (itemEntry > 0 && itemCount > 0)
-            player->AddItem(itemEntry, itemCount);
+        delivery.AddCurrencies(honor, arenaPoints);
+        if (!delivery.Commit())
+            return;
+
+        ZoePvP::RecordArenaReward(player->GetBattleground(), player);
 
         if (sConfigMgr->GetOption<bool>("Arena1v1.Zoe.Announce.Reward", true))
         {
@@ -443,7 +448,6 @@ namespace
     }
 }
 
-
 enum npcActions {
     NPC_ARENA_1V1_ACTION_CREATE_ARENA_TEAM = 1,
     NPC_ARENA_1V1_ACTION_JOIN_QUEUE_ARENA_RATED = 2,
@@ -454,7 +458,6 @@ enum npcActions {
     NPC_ARENA_1V1_MAIN_MENU = 21,
     NPC_ARENA_1V1_ACTION_HELP = 22,
 };
-
 
 bool teamExistForPlayerGuid(Player* player)
 {
@@ -524,7 +527,8 @@ public:
             ZoeArena1v1Message(pPlayer, "Modulo |cff4CFF00Arena 1v1|r ZoeCore ativo.");
     }
 
-    void OnPlayerGetMaxPersonalArenaRatingRequirement(const Player* player, uint32 minslot, uint32& maxArenaRating) const override
+    void OnPlayerGetMaxPersonalArenaRatingRequirement(Player const* player, uint32 minslot,
+        uint32& maxArenaRating) const override
     {
         if (sConfigMgr->GetOption<bool>("Arena1v1.VendorRating", false) && minslot < (uint32)sConfigMgr->GetOption<uint32>("Arena1v1.ArenaSlotID", 3))
             if (ArenaTeam* at = sArenaTeamMgr->GetArenaTeamByCaptain(player->GetGUID(), ARENA_TEAM_1V1))
@@ -572,7 +576,6 @@ public:
 private:
     uint32 _zoeGearCheck = 5000;
 };
-
 
 bool npc_1v1arena::OnGossipHello(Player* player, Creature* creature)
 {
@@ -659,7 +662,6 @@ bool npc_1v1arena::OnGossipSelect(Player* player, Creature* creature, uint32 /*s
             return true;
         }
 
-
         case NPC_ARENA_1V1_ACTION_JOIN_QUEUE_ARENA_UNRATED:
         {
             if (player->HasAura(26013) &&
@@ -695,7 +697,6 @@ bool npc_1v1arena::OnGossipSelect(Player* player, Creature* creature, uint32 /*s
             CloseGossipMenuFor(player);
             return true;
         }
-
 
         case NPC_ARENA_1V1_ACTION_GET_STATISTICS:
         {
@@ -1088,7 +1089,6 @@ public:
     }
 };
 
-
 class bg_1v1arena_zoecore : public AllBattlegroundScript
 {
 public:
@@ -1104,6 +1104,12 @@ public:
         if (bg->GetArenaType() != ARENA_TYPE_1V1)
             return;
 
+        if (!ZoePvP::CanRewardArena(bg, player))
+        {
+            ZoeArena1v1ClearPlayerBracket(player);
+            return;
+        }
+
         bool draw = winnerTeamId == TEAM_NEUTRAL;
         bool win = !draw && player->GetBgTeamId() == winnerTeamId;
 
@@ -1114,6 +1120,7 @@ public:
 
 void AddSC_npc_1v1arena()
 {
+    ZoePvP::RegisterArenaRewardScripts();
     new configloader_1v1arena();
     new playerscript_1v1arena();
     new playerscript_1v1arena_deserter();

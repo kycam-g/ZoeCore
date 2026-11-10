@@ -23,10 +23,12 @@
 #include "Opcodes.h"
 #include "Map.h"
 #include "Battleground.h"
+#include "../../ZoePvPRewards.h"
 
 #include <algorithm>
 #include <ctime>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -49,11 +51,13 @@ namespace
     {
         uint32 Count = 0;
         uint32 LastKillTime = 0;
+        bool BountyAvailable = false;
     };
 
     std::unordered_map<uint32, StreakInfo> PlayerStreaks;
     std::unordered_map<uint64, uint32> LastVictimKillTime;
     std::unordered_map<uint64, bool> FirstBloodDone;
+    std::recursive_mutex StreakMutex;
 
     uint32 Now()
     {
@@ -179,7 +183,7 @@ namespace
         if (!sConfigMgr->GetOption<bool>("ZoeKillStreak.AntiFarm.Enable", true))
             return true;
 
-        if (!killer || !victim)
+        if (!killer || !victim || !killer->GetSession() || !victim->GetSession())
             return false;
 
         uint32 minLevel = sConfigMgr->GetOption<uint32>("ZoeKillStreak.AntiFarm.MinLevel", 80);
@@ -192,7 +196,7 @@ namespace
         uint32 cooldown = sConfigMgr->GetOption<uint32>("ZoeKillStreak.AntiFarm.SameVictimCooldownSeconds", 300);
         if (cooldown > 0)
         {
-            uint64 key = MakePairKey(Guid(killer), Guid(victim));
+            uint64 key = MakePairKey(killer->GetSession()->GetAccountId(), victim->GetSession()->GetAccountId());
             uint32 now = Now();
 
             auto itr = LastVictimKillTime.find(key);
@@ -378,16 +382,17 @@ namespace
         return reward;
     }
 
-    void GiveReward(Player* player, uint32 honor, uint32 itemEntry, uint32 itemCount)
+    bool GiveReward(Player* player, uint32 honor, uint32 itemEntry, uint32 itemCount)
     {
         if (!player)
-            return;
+            return false;
 
-        if (honor > 0)
-            player->ModifyHonorPoints(int32(honor));
+        ZoePvP::Reward delivery(*player);
+        if (!delivery.AddItems(itemEntry, itemCount))
+            return false;
 
-        if (itemEntry > 0 && itemCount > 0)
-            player->AddItem(itemEntry, itemCount);
+        delivery.AddCurrencies(honor);
+        return delivery.Commit();
     }
 
     void ApplyKillStreakScale(Player* player)
@@ -549,7 +554,8 @@ namespace
         uint32 itemCount = ConfigUInt("ZoeKillStreak.Reward." + std::to_string(streak) + ".ItemCount", 0);
         uint32 honor = ConfigUInt("ZoeKillStreak.Reward." + std::to_string(streak) + ".Honor", 0);
 
-        GiveReward(killer, honor, itemEntry, itemCount);
+        if (!GiveReward(killer, honor, itemEntry, itemCount))
+            return;
 
         std::string rewardText = BuildRewardText(honor, itemCount, itemEntry);
         std::string key = "ZoeKillStreak.Message." + std::to_string(streak);
@@ -586,7 +592,8 @@ namespace
         uint32 itemCount = ConfigUInt("ZoeKillStreak.Bounty." + std::to_string(bracket) + ".ItemCount", 0);
         uint32 honor = ConfigUInt("ZoeKillStreak.Bounty." + std::to_string(bracket) + ".Honor", 0);
 
-        GiveReward(killer, honor, itemEntry, itemCount);
+        if (!GiveReward(killer, honor, itemEntry, itemCount))
+            return;
 
         std::string rewardText = BuildRewardText(honor, itemCount, itemEntry);
         std::string msg = FormatMessage(ConfigString("ZoeKillStreak.Message.Shutdown", "{killer} encerrou a sequencia de {victim}!"), killer, victim, victimStreak, rewardText);
@@ -636,11 +643,15 @@ namespace
         StreakInfo& info = PlayerStreaks[killerGuid];
         info.Count += 1;
         info.LastKillTime = Now();
-
-        ApplyMarkerAndPower(killer, info.Count);
-
         if (IsMilestone(info.Count))
-            RewardMilestone(killer, victim, info.Count);
+            info.BountyAvailable = true;
+
+        // Aura hooks may reset the streak; do not keep using a map reference across them.
+        uint32 streak = info.Count;
+        ApplyMarkerAndPower(killer, streak);
+
+        if (IsMilestone(streak))
+            RewardMilestone(killer, victim, streak);
     }
 }
 
@@ -649,17 +660,17 @@ class ZoeCoreKillStreak : public PlayerScript
 public:
     ZoeCoreKillStreak() : PlayerScript("ZoeCoreKillStreak", {
         PLAYERHOOK_ON_PVP_KILL,
-        PLAYERHOOK_ON_PLAYER_JUST_DIED,
         PLAYERHOOK_ON_LOGOUT,
         PLAYERHOOK_ON_MAP_CHANGED
     }) { }
 
     void OnPlayerPVPKill(Player* killer, Player* killed) override
     {
+        std::lock_guard<std::recursive_mutex> lock(StreakMutex);
         if (!Enabled())
             return;
 
-        if (!killer || !killed || killer == killed)
+        if (!killer || !killed || killer == killed || killer->IsSpectator() || killed->IsSpectator())
             return;
 
         if (!IsAllowedScope(killer))
@@ -668,7 +679,11 @@ public:
         uint32 victimStreak = 0;
         auto victimItr = PlayerStreaks.find(Guid(killed));
         if (victimItr != PlayerStreaks.end())
-            victimStreak = victimItr->second.Count;
+        {
+            if (victimItr->second.BountyAvailable)
+                victimStreak = victimItr->second.Count;
+            victimItr->second.BountyAvailable = false;
+        }
 
         if (sConfigMgr->GetOption<bool>("ZoeKillStreak.Reset.OnDeath", true))
             ResetStreak(killed, "death");
@@ -689,17 +704,9 @@ public:
         AddKill(killer, killed);
     }
 
-    void OnPlayerJustDied(Player* player) override
-    {
-        if (!Enabled())
-            return;
-
-        if (sConfigMgr->GetOption<bool>("ZoeKillStreak.Reset.OnDeath", true))
-            ResetStreak(player, "death");
-    }
-
     void OnPlayerLogout(Player* player) override
     {
+        std::lock_guard<std::recursive_mutex> lock(StreakMutex);
         if (!Enabled())
             return;
 
@@ -709,6 +716,7 @@ public:
 
     void OnPlayerMapChanged(Player* player) override
     {
+        std::lock_guard<std::recursive_mutex> lock(StreakMutex);
         if (!Enabled())
             return;
 
@@ -717,7 +725,30 @@ public:
     }
 };
 
+class ZoeCoreKillStreakDeath : public UnitScript
+{
+public:
+    ZoeCoreKillStreakDeath() : UnitScript("ZoeCoreKillStreakDeath", true, { UNITHOOK_ON_UNIT_DEATH }) { }
+
+    void OnUnitDeath(Unit* unit, Unit* /*killer*/) override
+    {
+        std::lock_guard<std::recursive_mutex> lock(StreakMutex);
+        Player* player = unit->ToPlayer();
+        if (!player)
+            return;
+
+        auto streak = PlayerStreaks.find(Guid(player));
+        if (streak != PlayerStreaks.end())
+            streak->second.BountyAvailable = false;
+
+        // Runs after OnPlayerPVPKill, so shutdown can consume the victim's pre-death streak first.
+        if (Enabled() && sConfigMgr->GetOption<bool>("ZoeKillStreak.Reset.OnDeath", true))
+            ResetStreak(player, "death");
+    }
+};
+
 void AddZoeCoreKillStreakScripts()
 {
     new ZoeCoreKillStreak();
+    new ZoeCoreKillStreakDeath();
 }

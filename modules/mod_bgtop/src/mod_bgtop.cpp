@@ -3,6 +3,7 @@
  * Convertido de 02-Expert_BG_Announce.lua para módulo C++.
  */
 
+#include "BGTopRewardDatabase.h"
 #include "Battleground.h"
 #include "Chat.h"
 #include "Config.h"
@@ -23,6 +24,8 @@
 
 namespace
 {
+    BGTopRewards::Pool BGTopDatabase;
+    bool BGTopDatabaseReady = false;
     uint32 BGTopProcessTimer = 0;
     uint32 BGTopResetTimer = 0;
     uint32 BGTopBackgroundTimer = 0;
@@ -155,34 +158,25 @@ namespace
         return top;
     }
 
-    void UpsertAggregateTotal(uint32 battlegroundId)
+    void UpsertAggregateTotal(uint32 battlegroundId, CharacterDatabaseTransaction transaction)
     {
-        CharacterDatabase.Execute(
-            "INSERT INTO `zoecore_bgtop_stats_total` (`guid`, `player_name`, `kills`, `honorable_kills`, `deaths`, `damage`, `healing`, `honor`, `bgs_played`, `updated_at`) "
-            "SELECT p.`character_guid`, COALESCE(c.`name`, 'Nenhum'), p.`score_killing_blows`, p.`score_honorable_kills`, p.`score_deaths`, p.`score_damage_done`, p.`score_healing_done`, p.`score_bonus_honor`, 1, UNIX_TIMESTAMP() "
-            "FROM `pvpstats_players` p LEFT JOIN `characters` c ON c.`guid`=p.`character_guid` WHERE p.`battleground_id`={} "
-            "ON DUPLICATE KEY UPDATE `player_name`=VALUES(`player_name`), `kills`=`kills`+VALUES(`kills`), `honorable_kills`=`honorable_kills`+VALUES(`honorable_kills`), `deaths`=`deaths`+VALUES(`deaths`), `damage`=`damage`+VALUES(`damage`), `healing`=`healing`+VALUES(`healing`), `honor`=`honor`+VALUES(`honor`), `bgs_played`=`bgs_played`+1, `updated_at`=UNIX_TIMESTAMP()",
-            battlegroundId);
+        auto* statement = BGTopDatabase.Statement(BGTopRewards::UPSERT_TOTAL);
+        statement->SetData(0, battlegroundId);
+        transaction->Append(statement);
     }
 
-    void UpsertAggregateWeekly(uint32 battlegroundId)
+    void UpsertAggregateWeekly(uint32 battlegroundId, CharacterDatabaseTransaction transaction)
     {
-        CharacterDatabase.Execute(
-            "INSERT INTO `zoecore_bgtop_stats_weekly` (`guid`, `week_year`, `week_number`, `player_name`, `kills`, `honorable_kills`, `deaths`, `damage`, `healing`, `honor`, `bgs_played`, `updated_at`) "
-            "SELECT p.`character_guid`, YEAR(CURDATE()), WEEK(CURDATE(), 3), COALESCE(c.`name`, 'Nenhum'), p.`score_killing_blows`, p.`score_honorable_kills`, p.`score_deaths`, p.`score_damage_done`, p.`score_healing_done`, p.`score_bonus_honor`, 1, UNIX_TIMESTAMP() "
-            "FROM `pvpstats_players` p LEFT JOIN `characters` c ON c.`guid`=p.`character_guid` WHERE p.`battleground_id`={} "
-            "ON DUPLICATE KEY UPDATE `player_name`=VALUES(`player_name`), `kills`=`kills`+VALUES(`kills`), `honorable_kills`=`honorable_kills`+VALUES(`honorable_kills`), `deaths`=`deaths`+VALUES(`deaths`), `damage`=`damage`+VALUES(`damage`), `healing`=`healing`+VALUES(`healing`), `honor`=`honor`+VALUES(`honor`), `bgs_played`=`bgs_played`+1, `updated_at`=UNIX_TIMESTAMP()",
-            battlegroundId);
+        auto* statement = BGTopDatabase.Statement(BGTopRewards::UPSERT_WEEKLY);
+        statement->SetData(0, battlegroundId);
+        transaction->Append(statement);
     }
 
-    void UpsertAggregateMonthly(uint32 battlegroundId)
+    void UpsertAggregateMonthly(uint32 battlegroundId, CharacterDatabaseTransaction transaction)
     {
-        CharacterDatabase.Execute(
-            "INSERT INTO `zoecore_bgtop_stats_monthly` (`guid`, `month_year`, `month_number`, `player_name`, `kills`, `honorable_kills`, `deaths`, `damage`, `healing`, `honor`, `bgs_played`, `updated_at`) "
-            "SELECT p.`character_guid`, YEAR(CURDATE()), MONTH(CURDATE()), COALESCE(c.`name`, 'Nenhum'), p.`score_killing_blows`, p.`score_honorable_kills`, p.`score_deaths`, p.`score_damage_done`, p.`score_healing_done`, p.`score_bonus_honor`, 1, UNIX_TIMESTAMP() "
-            "FROM `pvpstats_players` p LEFT JOIN `characters` c ON c.`guid`=p.`character_guid` WHERE p.`battleground_id`={} "
-            "ON DUPLICATE KEY UPDATE `player_name`=VALUES(`player_name`), `kills`=`kills`+VALUES(`kills`), `honorable_kills`=`honorable_kills`+VALUES(`honorable_kills`), `deaths`=`deaths`+VALUES(`deaths`), `damage`=`damage`+VALUES(`damage`), `healing`=`healing`+VALUES(`healing`), `honor`=`honor`+VALUES(`honor`), `bgs_played`=`bgs_played`+1, `updated_at`=UNIX_TIMESTAMP()",
-            battlegroundId);
+        auto* statement = BGTopDatabase.Statement(BGTopRewards::UPSERT_MONTHLY);
+        statement->SetData(0, battlegroundId);
+        transaction->Append(statement);
     }
 
     std::string BuildAnnounceMessage(std::string const& bg, uint32 winnerFaction, TopResult const& topKill, TopResult const& topDamage, TopResult const& topHeal, TopResult const& topHK, TopResult const& topHonor, TopResult const& topDeaths)
@@ -210,7 +204,12 @@ namespace
 
     bool ProcessBattleground(uint32 battlegroundId)
     {
-        QueryResult bgResult = CharacterDatabase.Query("SELECT `type`, `winner_faction` FROM `pvpstats_battlegrounds` WHERE `id`={}", battlegroundId);
+        if (!BGTopDatabaseReady)
+            return false;
+
+        auto* select = BGTopDatabase.Statement(BGTopRewards::SELECT_MATCH);
+        select->SetData(0, battlegroundId);
+        PreparedQueryResult bgResult = BGTopDatabase.Query(select);
         if (!bgResult)
             return false;
 
@@ -226,22 +225,27 @@ namespace
         TopResult topHonor = QueryTop(battlegroundId, "score_bonus_honor");
         TopResult topDeaths = QueryTop(battlegroundId, "score_deaths");
 
-        UpsertAggregateTotal(battlegroundId);
+        CharacterDatabaseTransaction transaction = CharacterDatabase.BeginTransaction();
+        // A duplicate primary key aborts the entire transaction, including all aggregate increments.
+        auto* claim = BGTopDatabase.Statement(BGTopRewards::INSERT_CLAIM);
+        claim->SetData(0, battlegroundId);
+        transaction->Append(claim);
+        UpsertAggregateTotal(battlegroundId, transaction);
 
         if (sConfigMgr->GetOption<bool>("BGTop.Ranking.Weekly.Enable", true))
-            UpsertAggregateWeekly(battlegroundId);
+            UpsertAggregateWeekly(battlegroundId, transaction);
 
         if (sConfigMgr->GetOption<bool>("BGTop.Ranking.Monthly.Enable", true))
-            UpsertAggregateMonthly(battlegroundId);
+            UpsertAggregateMonthly(battlegroundId, transaction);
 
-        CharacterDatabase.Execute(
-            "REPLACE INTO `zoecore_bgtop_match_summary` (`battleground_id`, `bg_type`, `bg_name`, `winner_faction`, `top_kill_name`, `top_kill_value`, `top_damage_name`, `top_damage_value`, `top_heal_name`, `top_heal_value`, `top_hk_name`, `top_hk_value`, `top_honor_name`, `top_honor_value`, `top_deaths_name`, `top_deaths_value`, `created_at`) "
-            "VALUES ({}, {}, '{}', {}, '{}', {}, '{}', {}, '{}', {}, '{}', {}, '{}', {}, '{}', {}, UNIX_TIMESTAMP())",
-            battlegroundId, bgType, bgName, winnerFaction,
+        auto* summary = BGTopDatabase.Statement(BGTopRewards::UPSERT_SUMMARY);
+        summary->SetArguments(battlegroundId, bgType, bgName, winnerFaction,
             topKill.Name, topKill.Value, topDamage.Name, topDamage.Value, topHeal.Name, topHeal.Value,
             topHK.Name, topHK.Value, topHonor.Name, topHonor.Value, topDeaths.Name, topDeaths.Value);
-
-        CharacterDatabase.Execute("REPLACE INTO `zoecore_bgtop_processed` (`battleground_id`, `processed_at`) VALUES ({}, UNIX_TIMESTAMP())", battlegroundId);
+        transaction->Append(summary);
+        auto committed = BGTopDatabase.AsyncCommitTransaction(transaction);
+        if (!committed.m_future.get())
+            return false;
 
         if (sConfigMgr->GetOption<bool>("BGTop.Announce.Enable", true))
             SendWorld(BuildAnnounceMessage(bgName, winnerFaction, topKill, topDamage, topHeal, topHK, topHonor, topDeaths));
@@ -663,7 +667,6 @@ public:
     }
 };
 
-
 class ZoeCoreBGTopWorldScript : public WorldScript
 {
 public:
@@ -700,7 +703,6 @@ public:
         BGTopBackgroundTimer -= diff;
     }
 };
-
 
 class npc_bgtop : public CreatureScript
 {
@@ -771,8 +773,43 @@ public:
     }
 };
 
+class ZoeCoreBGTopDatabase : public DatabaseScript
+{
+public:
+    ZoeCoreBGTopDatabase() : DatabaseScript("ZoeCoreBGTopDatabase", {
+        DATABASEHOOK_ON_MODULE_DATABASES_LOADING,
+        DATABASEHOOK_ON_MODULE_DATABASES_KEEPALIVE,
+        DATABASEHOOK_ON_MODULE_DATABASES_CLOSING
+    }) { }
+
+    bool OnModuleDatabasesLoading() override
+    {
+        if (!Enabled())
+            return true;
+
+        MySQLConnectionInfo const& info = *CharacterDatabase.GetConnectionInfo();
+        BGTopDatabase.SetConnectionInfo(info.host + ";" + info.port_or_socket + ";" + info.user + ";"
+            + info.password + ";" + info.database + ";" + info.ssl, 1, 1);
+        BGTopDatabaseReady = BGTopDatabase.Open() == 0 && BGTopDatabase.PrepareStatements();
+        return BGTopDatabaseReady;
+    }
+
+    void OnModuleDatabasesKeepAlive() override
+    {
+        if (BGTopDatabaseReady)
+            BGTopDatabase.KeepAlive();
+    }
+
+    void OnModuleDatabasesClosing() override
+    {
+        BGTopDatabaseReady = false;
+        BGTopDatabase.Close();
+    }
+};
+
 void AddZoeCoreBGTopScripts()
 {
+    new ZoeCoreBGTopDatabase();
     new BGTopCommandScript();
     new ZoeCoreBGTopPlayerScript();
     new ZoeCoreBGTopBGScript();

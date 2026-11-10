@@ -7,7 +7,12 @@
 #include "Config.h"
 #include "Creature.h"
 #include "DatabaseEnv.h"
+#include "Item.h"
+#include "Log.h"
+#include "Mail.h"
+#include "MailMgr.h"
 #include "ObjectGuid.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "Random.h"
 #include "ScriptMgr.h"
@@ -18,6 +23,7 @@
 #include <algorithm>
 #include <ctime>
 #include <map>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <string>
@@ -811,8 +817,6 @@ namespace
             return;
         }
 
-        uint32 claimed = 0;
-
         do
         {
             Field* fields = result->Fetch();
@@ -827,41 +831,96 @@ namespace
             if (!prizes)
                 continue;
 
-            bool delivered = true;
+            // Prepare every stack before sending anything. CreateItem clamps the count to one stack.
+            std::vector<std::unique_ptr<Item>> items;
+            bool valid = true;
 
             do
             {
                 Field* p = prizes->Fetch();
                 uint32 item = p[0].Get<uint32>();
                 uint32 count = p[1].Get<uint32>();
-                std::string source = p[2].Get<std::string>();
-
-                if (!item || !count)
-                    continue;
-
-                if (!player->AddItem(item, count))
+                ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(item);
+                if (!itemTemplate || !count)
                 {
-                    SendPlayer(player, Prefix() + " Espaco insuficiente na bag para resgatar todos os premios.");
-                    delivered = false;
+                    valid = false;
                     break;
                 }
 
-                SendPlayer(player, Prefix() + " Premio entregue: item " + std::to_string(item) + " x" + std::to_string(count) + " (" + source + ").");
+                while (count)
+                {
+                    uint32 stackCount = std::min(count, itemTemplate->GetMaxStackSize());
+                    std::unique_ptr<Item> reward(Item::CreateItem(item, stackCount, player));
+                    if (!reward)
+                    {
+                        valid = false;
+                        break;
+                    }
 
+                    items.push_back(std::move(reward));
+                    count -= stackCount;
+                }
+
+                if (!valid)
+                    break;
             } while (prizes->NextRow());
 
-            if (!delivered)
+            if (!valid)
+            {
+                LOG_ERROR("module.lottery", "Cannot create all items for lottery winner {}", winnerId);
+                SendPlayer(player, Prefix() + " Premio invalido. Avise a administracao; o resgate continua pendente.");
                 break;
+            }
 
-            CharacterDatabase.Execute("UPDATE `zoecore_lottery_winners` SET `claimed`=1, `claimed_at`={} WHERE `id`={}", Now(), winnerId);
-            ++claimed;
+            CharacterDatabaseTransaction transaction = CharacterDatabase.BeginTransaction();
+            std::vector<uint32> mailIds;
+            for (std::size_t offset = 0; offset < items.size();)
+            {
+                MailDraft draft("ZoeCore Loteria - Premio", "Seu premio da loteria esta nos anexos desta mensagem.");
+                for (uint32 attachments = 0; attachments < MAX_MAIL_ITEMS && offset < items.size(); ++attachments)
+                {
+                    Item* reward = items[offset++].release();
+                    reward->SaveToDB(transaction);
+                    draft.AddItem(reward);
+                }
 
-            SendPlayer(player, Prefix() + " Premio resgatado: " + type + ", acertos " + std::to_string(matchCount) + ".");
+                draft.SendMailTo(transaction, MailReceiver(player), MailSender(MAIL_NORMAL, 0));
+                mailIds.push_back(player->GetMails().front()->messageID);
+            }
 
+            // Persist the mail attachments and the claim together. Wait before accepting another claim
+            // or allowing the receiver to use the in-memory mailbox created by SendMailTo.
+            transaction->Append("UPDATE `zoecore_lottery_winners` SET `claimed`=1, `claimed_at`={} "
+                "WHERE `id`={}",
+                Now(), winnerId);
+            auto commit = CharacterDatabase.AsyncCommitTransaction(transaction);
+            if (!commit.m_future.get())
+            {
+                // The DB rolled back; discard the corresponding in-memory mails and their items too.
+                for (uint32 mailId : mailIds)
+                {
+                    Mail* mail = player->GetMail(mailId);
+                    for (MailItemInfo const& attachment : mail->items)
+                    {
+                        Item* reward = player->GetMItem(attachment.item_guid);
+                        player->RemoveMItem(attachment.item_guid);
+                        delete reward;
+                    }
+
+                    player->RemoveMail(mailId);
+                    sMailMgr->OnMailDeleted(mail->receiver);
+                    delete mail;
+                }
+
+                player->UpdateNextMailTimeAndUnreads();
+                LOG_ERROR("module.lottery", "Cannot commit lottery prize claim {}", winnerId);
+                SendPlayer(player, Prefix() + " Falha ao salvar o premio. Tente resgatar novamente.");
+                break;
+            }
+
+            SendPlayer(player, Prefix() + " Premio enviado pelo correio: " + type
+                + ", acertos " + std::to_string(matchCount) + ".");
         } while (result->NextRow());
-
-        if (claimed)
-            player->SaveToDB(false, true);
     }
 
     void SendLotteryInfo(Player* player)

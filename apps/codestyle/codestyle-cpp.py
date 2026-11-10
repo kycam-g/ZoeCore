@@ -1,3 +1,4 @@
+import argparse
 import io
 import os
 import sys
@@ -45,13 +46,16 @@ results = {
 }
 
 # Main function to parse all the files of the project
-def parsing_file(directory: str) -> None:
+def parsing_file(directory: str, selected_files=None) -> None:
     print("Starting AzerothCore CPP Codestyle check...")
     print(" ")
     print("Please read the C++ Code Standards for AzerothCore:")
     print("https://www.azerothcore.org/wiki/cpp-code-standards")
     print(" ")
-    for root, _, files in os.walk(directory):
+    file_groups = os.walk(directory) if selected_files is None else (
+        (os.path.dirname(path), [], [os.path.basename(path)]) for path in selected_files
+    )
+    for root, _, files in file_groups:
         for file in files:
             if not file.endswith('.ico'):                                   # Skip .ico files that cannot be read
                 file_path = os.path.join(root, file)
@@ -295,5 +299,8 @@ def misc_codestyle_check(file: io, file_path: str) -> None:
         error_handler = True
         results["Misc codestyle check"] = "Failed"
 
-# Main function
-parsing_file(src_directory)
+# By default check the core; CI can also check the exact module sources changed by a PR.
+parser = argparse.ArgumentParser()
+parser.add_argument('--files', nargs='*', help='Check only the specified source files')
+args = parser.parse_args()
+parsing_file(src_directory, args.files)

@@ -32,8 +32,6 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
-
-
 namespace
 {
     enum class ZoeVipTagLevel : uint8

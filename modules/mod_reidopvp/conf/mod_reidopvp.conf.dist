@@ -31,7 +31,8 @@ ReiDoPvP.IgnoreGM = 1
 # Bloqueia farm de kill matando o mesmo jogador repetidamente.
 ReiDoPvP.AntiFarm.Enable = 1
 
-# Tempo em segundos para a mesma vítima voltar a contar ponto para o mesmo killer.
+# Tempo em segundos entre as mesmas contas, mesmo trocando de personagem.
+# Kills entre personagens da mesma conta nunca pontuam.
 ReiDoPvP.AntiFarm.CooldownSeconds = 300
 
 ###################################################################################################
@@ -97,6 +98,7 @@ ReiDoPvP.Reset.Monthly.Message = "|cffff2020[ZoeCore]|r Ranking mensal do Rei do
 # Funcionamento:
 # - No fechamento semanal/mensal, o módulo grava a recompensa como pendente no banco.
 # - Quando o vencedor logar, a recompensa é entregue automaticamente.
+# - Itens chegam pelo correio; itens, pontos e confirmacao sao salvos na mesma transacao.
 # - Isso evita perder recompensa se o jogador estiver offline na hora do fechamento.
 #
 # Se ItemEntry = 0, não entrega item.

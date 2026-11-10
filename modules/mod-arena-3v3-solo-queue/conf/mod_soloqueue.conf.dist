@@ -1,5 +1,9 @@
 [worldserver]
 
+# Recompensas ZoeCore: itens chegam pelo correio; honor e itens sao salvos juntos.
+# Sem dano/cura na partida ou com outro personagem da mesma conta, nao ha recompensa custom.
+# Limites compartilhados: ZoePvP.Arena.Reward.MinCombatSeconds (15) e OpponentCooldownSeconds (60).
+
 ###################################################################################################
 #   SOLO 3v3 ARENA
 #

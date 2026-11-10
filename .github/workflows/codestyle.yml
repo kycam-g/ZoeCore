@@ -8,6 +8,9 @@ on:
       - ready_for_review
     paths:
       - src/**
+      - modules/**
+      - apps/codestyle/codestyle-cpp.py
+      - .github/workflows/codestyle.yml
       - "!README.md"
       - "!docs/**"
 
@@ -21,15 +24,29 @@ jobs:
   triage:
     runs-on: ubuntu-latest
     name: C++
-    if: github.repository == 'azerothcore/azerothcore-wotlk' && !github.event.pull_request.draft
+    if: >-
+      contains(fromJSON('["azerothcore/azerothcore-wotlk", "kycam-g/ZoeCore"]'), github.repository)
+      && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Setup python
         uses: actions/setup-python@v7
         with:
           python-version: '3.10'
       - name: AzerothCore codestyle
         run: python ./apps/codestyle/codestyle-cpp.py
+      - name: Changed module codestyle
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA" HEAD -- \
+            'modules/**/*.cpp' 'modules/**/*.h' 'modules/**/*.hpp' \
+            > "$RUNNER_TEMP/module-sources"
+          mapfile -d '' -t module_sources < "$RUNNER_TEMP/module-sources"
+          python ./apps/codestyle/codestyle-cpp.py --files "${module_sources[@]}"
       - name: C++ Advanced
         run: |
           sudo apt update -y

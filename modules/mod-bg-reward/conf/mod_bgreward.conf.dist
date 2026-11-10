@@ -1,5 +1,14 @@
 [worldserver]
 
+# Itens de recompensa chegam pelo correio, inclusive quando as bolsas estao cheias.
+# Arenas exigem participacao em combate e nao premiam personagens da mesma conta.
+# Apenas um modulo concede recompensa custom por conta em cada arena.
+# Estes limites tambem se aplicam aos modulos de arena 1v1 e solo 3v3.
+# Tempo minimo de combate, sem contar a preparacao. 0 desativa este limite.
+ZoePvP.Arena.Reward.MinCombatSeconds = 15
+# Intervalo entre recompensas contra a mesma conta adversaria. 0 desativa este limite.
+ZoePvP.Arena.Reward.OpponentCooldownSeconds = 60
+
 ###################################################################################################
 # ZOECORE BG REWARD V4 - PROTECTED HK/DEATHS FIX
 #
@@ -46,8 +55,8 @@ Battleground.Reward.Require.Activity.Enable = 1
 Battleground.Reward.Require.NotAFK = 1
 
 # Tempo mínimo dentro da BG em segundos.
-# O módulo registra a entrada por troca de mapa. Se não conseguir achar esse registro,
-# usa a duração total da BG como fallback.
+# Conta apenas o tempo individual desde a entrada ou o inicio da partida, sem a preparacao.
+# Sem registro individual, o tempo validado e zero; a duracao total da BG nao e usada.
 Battleground.Reward.Require.MinTimeSeconds = 120
 
 # Dano + cura mínimo para receber recompensa.

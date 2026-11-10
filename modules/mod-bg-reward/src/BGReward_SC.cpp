@@ -16,23 +16,24 @@
 #include "ObjectGuid.h"
 #include "Player.h"
 #include "ScriptMgr.h"
+#include "../../ZoePvPRewards.h"
 
-#include <ctime>
 #include <string>
 #include <unordered_map>
 
 namespace
 {
-    std::unordered_map<ObjectGuid::LowType, uint32> PlayerBgJoinTime;
+    struct Participation
+    {
+        uint32 InstanceId;
+        uint32 JoinedAt;
+    };
+
+    std::unordered_map<ObjectGuid::LowType, Participation> PlayerBgJoinTime;
 
     ObjectGuid::LowType Guid(Player* player)
     {
         return player ? player->GetGUID().GetCounter() : 0;
-    }
-
-    uint32 Now()
-    {
-        return uint32(std::time(nullptr));
     }
 
     void ReplaceAll(std::string& text, std::string const& search, std::string const& replace)
@@ -75,19 +76,17 @@ namespace
 
     uint32 GetPlayerTimeInBgSeconds(Player* player, Battleground* bg)
     {
-        if (!player)
+        if (!player || !bg)
             return 0;
 
         auto itr = PlayerBgJoinTime.find(Guid(player));
-        if (itr != PlayerBgJoinTime.end())
+        if (itr != PlayerBgJoinTime.end() && itr->second.InstanceId == bg->GetInstanceID())
         {
-            uint32 now = Now();
-            return now > itr->second ? now - itr->second : 0;
+            uint32 elapsed = bg->GetStartTime();
+            return elapsed > itr->second.JoinedAt ? (elapsed - itr->second.JoinedAt) / IN_MILLISECONDS : 0;
         }
 
-        if (bg)
-            return bg->GetStartTime() / 1000;
-
+        // A match's age is not proof that this character participated in it.
         return 0;
     }
 
@@ -146,7 +145,7 @@ namespace
         uint32 minDamageHealing = sConfigMgr->GetOption<uint32>("Battleground.Reward.Require.MinDamageOrHealing", 10000);
         if (minDamageHealing > 0)
         {
-            uint32 activityValue = score->GetDamageDone() + score->GetHealingDone();
+            uint64 activityValue = uint64(score->GetDamageDone()) + score->GetHealingDone();
             if (activityValue < minDamageHealing)
             {
                 SendBlocked(player, "Battleground.Reward.Message.Blocked.DamageHealing",
@@ -220,7 +219,9 @@ namespace
             return;
         }
 
-        player->AddItem(itemId, count);
+        ZoePvP::Reward delivery(*player);
+        if (!delivery.AddItems(itemId, count) || !delivery.Commit())
+            return;
 
         if (sConfigMgr->GetOption<bool>("Battleground.Reward.Announce.Private", true))
         {
@@ -265,7 +266,7 @@ namespace
 
     void RewardArena(Battleground* bg, Player* player, bool winner)
     {
-        if (!bg || !player)
+        if (!ZoePvP::CanRewardArena(bg, player))
             return;
 
         uint32 count = winner
@@ -279,7 +280,11 @@ namespace
         if (itemId == 0)
             return;
 
-        player->AddItem(itemId, count);
+        ZoePvP::Reward delivery(*player);
+        if (!delivery.AddItems(itemId, count) || !delivery.Commit())
+            return;
+
+        ZoePvP::RecordArenaReward(bg, player);
 
         if (sConfigMgr->GetOption<bool>("Arena.Reward.Announce.Private", true))
         {
@@ -310,7 +315,8 @@ public:
 
         if (player->InBattleground() && !player->InArena() && player->GetBattleground())
         {
-            PlayerBgJoinTime[guid] = Now();
+            Battleground* bg = player->GetBattleground();
+            PlayerBgJoinTime[guid] = { bg->GetInstanceID(), bg->GetStartTime() };
             return;
         }
 
@@ -330,8 +336,20 @@ class BGScript_BattlegroundsReward : public BGScript
 {
 public:
     BGScript_BattlegroundsReward() : BGScript("BGScript_BattlegroundsReward", {
-        ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_END_REWARD
+        ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_END_REWARD,
+        ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_START
     }) { }
+
+    void OnBattlegroundStart(Battleground* bg) override
+    {
+        if (!bg || bg->isArena())
+            return;
+
+        // Do not count the preparation period as active match time.
+        for (auto const& [guid, player] : bg->GetPlayers())
+            if (player)
+                PlayerBgJoinTime[guid.GetCounter()] = { bg->GetInstanceID(), bg->GetStartTime() };
+    }
 
     void OnBattlegroundEndReward(Battleground* bg, Player* player, TeamId winnerTeamId) override
     {
@@ -355,6 +373,7 @@ public:
 
 void AddSC_BattlegroundsReward()
 {
+    ZoePvP::RegisterArenaRewardScripts();
     new BGReward_PlayerScript();
     new BGScript_BattlegroundsReward();
 }

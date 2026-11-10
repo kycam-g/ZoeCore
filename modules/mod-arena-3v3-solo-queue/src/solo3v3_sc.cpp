@@ -18,6 +18,7 @@
 #include "solo3v3_sc.h"
 #include "Item.h"
 #include "WorldSessionMgr.h"
+#include "../../ZoePvPRewards.h"
 #include <unordered_map>
 
 namespace
@@ -81,11 +82,18 @@ namespace
         uint32 itemEntry = sConfigMgr->GetOption<uint32>("Solo.3v3.Zoe.Reward." + key + ".Item", 900001);
         uint32 itemCount = sConfigMgr->GetOption<uint32>("Solo.3v3.Zoe.Reward." + key + ".ItemCount", draw ? 2 : (win ? 15 : 5));
 
-        if (honor > 0)
-            player->ModifyHonorPoints(int32(honor));
+        if (!honor && (!itemEntry || !itemCount))
+            return;
 
-        if (itemEntry > 0 && itemCount > 0)
-            player->AddItem(itemEntry, itemCount);
+        ZoePvP::Reward delivery(*player);
+        if (!delivery.AddItems(itemEntry, itemCount))
+            return;
+
+        delivery.AddCurrencies(honor);
+        if (!delivery.Commit())
+            return;
+
+        ZoePvP::RecordArenaReward(player->GetBattleground(), player);
 
         if (sConfigMgr->GetOption<bool>("Solo.3v3.Zoe.Announce.Reward", true))
         {
@@ -121,7 +129,6 @@ namespace
         }
     }
 }
-
 
 void NpcSolo3v3::Initialize()
 {
@@ -663,7 +670,9 @@ bool NpcSolo3v3::JoinQueueArena(Player* player, Creature* /*creature*/, bool isR
     sBattlegroundMgr->BuildBattlegroundStatusPacket(&data, bg, queueSlot, STATUS_WAIT_QUEUE, avgTime, 0, arenatype, TEAM_NEUTRAL, isRated);
     player->GetSession()->SendPacket(&data);
 
-    if (isRated && matchmakerRating == 0) {
+    if (isRated && matchmakerRating == 0)
+
+    {
         matchmakerRating = 1;
     }
 
@@ -876,7 +885,9 @@ void Solo3v3BG::OnQueueUpdate(BattlegroundQueue* queue, uint32 /*diff*/, Battleg
         arena->SetArenaTeamIdForTeam(TEAM_ALLIANCE, arenaTeams[TEAM_ALLIANCE]->GetId());
         arena->SetArenaTeamIdForTeam(TEAM_HORDE, arenaTeams[TEAM_HORDE]->GetId());
 
-        if (isRated) {
+        if (isRated)
+
+        {
             ArenaTeamsRating arenaTeamsRating;
 
             arenaTeamsRating.allianceRating = arenaTeams[TEAM_ALLIANCE]->GetStats().Rating;
@@ -927,7 +938,7 @@ void Solo3v3BG::OnBattlegroundEndReward(Battleground* bg, Player* player, TeamId
     if (!bg || !player)
         return;
 
-    if (bg->GetArenaType() == ARENA_TYPE_3v3_SOLO)
+    if (bg->GetArenaType() == ARENA_TYPE_3v3_SOLO && ZoePvP::CanRewardArena(bg, player))
     {
         bool isDraw = winnerTeamId == TEAM_NEUTRAL;
         bool isWinner = !isDraw && player->GetBgTeamId() == winnerTeamId;
@@ -984,14 +995,17 @@ void Solo3v3BG::OnBattlegroundEndReward(Battleground* bg, Player* player, TeamId
 
         TeamId bgTeamId = player->GetBgTeamId();
         const bool isPlayerWinning = bgTeamId == winnerTeamId;
-        if (isPlayerWinning) {
+        if (isPlayerWinning)
+        {
             ArenaTeam* winnerArenaTeam = sArenaTeamMgr->GetArenaTeamById(bg->GetArenaTeamIdForTeam(winnerTeamId));
             oldTeamRating = winnerTeamId == TEAM_HORDE ? oldTeamRatingHorde : oldTeamRatingAlliance;
             ratingModifier = int32(winnerArenaTeam->GetRating()) - oldTeamRating;
 
             atStats.SeasonWins += 1;
             atStats.WeekWins += 1;
-        } else {
+        }
+        else
+        {
             ArenaTeam* loserArenaTeam  = sArenaTeamMgr->GetArenaTeamById(bg->GetArenaTeamIdForTeam(bg->GetOtherTeamId(winnerTeamId)));
             oldTeamRating = winnerTeamId == TEAM_HORDE ? oldTeamRatingAlliance : oldTeamRatingHorde;
             ratingModifier = int32(loserArenaTeam->GetRating()) - oldTeamRating;
@@ -1018,12 +1032,16 @@ void Solo3v3BG::OnBattlegroundEndReward(Battleground* bg, Player* player, TeamId
                 itr->WeekGames += 1;
                 itr->SeasonGames += 1;
 
-                if (isPlayerWinning) {
+                if (isPlayerWinning)
+
+                {
                     itr->WeekWins += 1;
                     itr->SeasonWins += 1;
                     itr->MatchMakerRating += ratingModifier;
                     itr->MaxMMR = std::max(itr->MaxMMR, itr->MatchMakerRating);
-                } else {
+                }
+                else
+                {
                     if (int32(itr->MatchMakerRating) + ratingModifier < 0)
                         itr->MatchMakerRating = 0;
                     else
@@ -1214,7 +1232,8 @@ void PlayerScript3v3Arena::OnPlayerBattlegroundDesertion(Player* player, const B
 
 void PlayerScript3v3Arena::OnPlayerLogin(Player* pPlayer)
 {
-    if (sConfigMgr->GetOption<bool>("Solo.3v3.ShowMessageOnLogin", false)) {
+    if (sConfigMgr->GetOption<bool>("Solo.3v3.ShowMessageOnLogin", false))
+    {
         ChatHandler(pPlayer->GetSession()).SendSysMessage("This server is running the |cff4CFF00Arena solo Q 3v3 |rmodule.");
     }
 }
@@ -1230,7 +1249,8 @@ void PlayerScript3v3Arena::OnPlayerGetArenaPersonalRating(Player* player, uint8 
     }
 }
 
-void PlayerScript3v3Arena::OnPlayerGetMaxPersonalArenaRatingRequirement(const Player* player, uint32 minslot, uint32& maxArenaRating) const
+void PlayerScript3v3Arena::OnPlayerGetMaxPersonalArenaRatingRequirement(Player const* player, uint32 minslot,
+    uint32& maxArenaRating) const
 {
     if (!sConfigMgr->GetOption<bool>("Solo.3v3.VendorRating", true))
     {
@@ -1284,7 +1304,6 @@ bool PlayerScript3v3Arena::OnPlayerCanBattleFieldPort(Player* player, uint8 aren
     return true;
 }
 
-
 void PlayerScript3v3Arena::OnPlayerLogout(Player* player)
 {
     sSolo->ClearZoePlayerBracket(player);
@@ -1306,9 +1325,9 @@ bool PlayerScript3v3Arena::OnPlayerCanEquipItem(Player* player, uint8 /*slot*/, 
     return sSolo->CanEquipZoeGearBracketItem(player, pItem);
 }
 
-
 void AddSC_Solo_3v3_Arena()
 {
+    ZoePvP::RegisterArenaRewardScripts();
     if (!ArenaTeam::ArenaSlotByType.count(ARENA_TEAM_SOLO_3v3))
         ArenaTeam::ArenaSlotByType[ARENA_TEAM_SOLO_3v3] = ARENA_SLOT_SOLO_3v3;
 

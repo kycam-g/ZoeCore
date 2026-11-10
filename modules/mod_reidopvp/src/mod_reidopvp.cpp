@@ -8,6 +8,7 @@
 #include "Creature.h"
 #include "DatabaseEnv.h"
 #include "GossipDef.h"
+#include "Log.h"
 #include "Map.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -15,8 +16,11 @@
 #include "ScriptedGossip.h"
 #include "WorldSession.h"
 #include "WorldSessionMgr.h"
+#include "ReiRewardDatabase.h"
+#include "../../ZoePvPRewards.h"
 
 #include <ctime>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -44,6 +48,9 @@ namespace
     };
 
     std::unordered_map<KillKey, uint32, KillKeyHash> LastKillTime;
+    std::mutex AntiFarmMutex;
+    ReiRewards::Pool RewardDatabase;
+    bool RewardDatabaseReady = false;
     uint32 ResetCheckTimer = 0;
 
     bool IsEnabled()
@@ -137,7 +144,9 @@ namespace
         uint32 cooldown = sConfigMgr->GetOption<uint32>("ReiDoPvP.AntiFarm.CooldownSeconds", 300);
         uint32 now = uint32(time(nullptr));
 
-        KillKey key { killer->GetGUID().GetCounter(), victim->GetGUID().GetCounter() };
+        // Character changes must not bypass the cooldown between the same two accounts.
+        std::lock_guard<std::mutex> lock(AntiFarmMutex);
+        KillKey key { killer->GetSession()->GetAccountId(), victim->GetSession()->GetAccountId() };
         auto itr = LastKillTime.find(key);
 
         if (itr != LastKillTime.end() && now < itr->second + cooldown)
@@ -341,6 +350,11 @@ namespace
         if (!killer || !victim || killer == victim || !IsEnabled())
             return;
 
+        if (!killer->GetSession() || !victim->GetSession()
+            || killer->GetSession()->GetAccountId() == victim->GetSession()->GetAccountId()
+            || killer->IsSpectator() || victim->IsSpectator())
+            return;
+
         if (sConfigMgr->GetOption<bool>("ReiDoPvP.IgnoreGM", true))
         {
             if (killer->GetSession()->IsGMAccount() || victim->GetSession()->IsGMAccount())
@@ -369,7 +383,6 @@ namespace
         LogKill(killer, victim, score);
         RefreshKingTables();
     }
-
 
     uint32 DaysInMonth(uint32 year, uint32 month)
     {
@@ -528,12 +541,13 @@ namespace
 
     void DeliverPendingRewards(Player* player)
     {
-        if (!player || !sConfigMgr->GetOption<bool>("ReiDoPvP.Reward.DeliverOnLogin", true))
+        if (!player || !RewardDatabaseReady
+            || !sConfigMgr->GetOption<bool>("ReiDoPvP.Reward.DeliverOnLogin", true))
             return;
 
-        QueryResult result = CharacterDatabase.Query(
-            "SELECT `id`, `period`, `item_entry`, `item_count`, `honor`, `arena` FROM `zoecore_pvp_king_reward_pending` WHERE `guid`={} AND `delivered`=0 ORDER BY `id` ASC",
-            player->GetGUID().GetCounter());
+        auto* select = RewardDatabase.Statement(ReiRewards::SELECT_PENDING);
+        select->SetData(0, player->GetGUID().GetCounter());
+        PreparedQueryResult result = RewardDatabase.Query(select);
 
         if (!result)
             return;
@@ -548,22 +562,24 @@ namespace
             uint32 honor = fields[4].Get<uint32>();
             uint32 arena = fields[5].Get<uint32>();
 
-            if (itemEntry && itemCount)
+            ZoePvP::Reward delivery(*player);
+            if (!delivery.AddItems(itemEntry, itemCount))
             {
-                if (!player->AddItem(itemEntry, itemCount))
-                {
-                    ChatHandler(player->GetSession()).SendSysMessage("|cffff2020[Rei do PvP]|r Recompensa pendente, mas seu inventario esta cheio.");
-                    continue;
-                }
+                LOG_ERROR("module.reidopvp", "Invalid item in pending PvP reward {}", rewardId);
+                continue;
             }
 
-            if (honor)
-                player->ModifyHonorPoints(int32(honor));
-
-            if (arena)
-                player->ModifyArenaPoints(int32(arena));
-
-            CharacterDatabase.Execute("UPDATE `zoecore_pvp_king_reward_pending` SET `delivered`=1, `delivered_at`={} WHERE `id`={}", uint32(time(nullptr)), rewardId);
+            delivery.AddCurrencies(honor, arena);
+            auto* delivered = RewardDatabase.Statement(ReiRewards::MARK_DELIVERED);
+            delivered->SetData(0, uint32(time(nullptr)));
+            delivered->SetData(1, rewardId);
+            delivered->SetData(2, player->GetGUID().GetCounter());
+            delivery.GetTransaction()->Append(delivered);
+            if (!delivery.Commit(&RewardDatabase))
+            {
+                LOG_ERROR("module.reidopvp", "Cannot commit pending PvP reward {}", rewardId);
+                break;
+            }
 
             std::string message = period == "weekly"
                 ? sConfigMgr->GetOption<std::string>("ReiDoPvP.Reward.Weekly.DeliveredMessage", "|cff00FFFF[Rei do PvP]|r Voce recebeu sua recompensa semanal do Rei do PvP!")
@@ -573,7 +589,6 @@ namespace
 
         } while (result->NextRow());
     }
-
 
     void SendWorld(std::string const& message)
     {
@@ -859,8 +874,43 @@ public:
     }
 };
 
+class ZoeCoreReiRewardDatabase : public DatabaseScript
+{
+public:
+    ZoeCoreReiRewardDatabase() : DatabaseScript("ZoeCoreReiRewardDatabase", {
+        DATABASEHOOK_ON_MODULE_DATABASES_LOADING,
+        DATABASEHOOK_ON_MODULE_DATABASES_KEEPALIVE,
+        DATABASEHOOK_ON_MODULE_DATABASES_CLOSING
+    }) { }
+
+    bool OnModuleDatabasesLoading() override
+    {
+        if (!IsEnabled())
+            return true;
+
+        MySQLConnectionInfo const& info = *CharacterDatabase.GetConnectionInfo();
+        RewardDatabase.SetConnectionInfo(info.host + ";" + info.port_or_socket + ";" + info.user + ";"
+            + info.password + ";" + info.database + ";" + info.ssl, 1, 1);
+        RewardDatabaseReady = RewardDatabase.Open() == 0 && RewardDatabase.PrepareStatements();
+        return RewardDatabaseReady;
+    }
+
+    void OnModuleDatabasesKeepAlive() override
+    {
+        if (RewardDatabaseReady)
+            RewardDatabase.KeepAlive();
+    }
+
+    void OnModuleDatabasesClosing() override
+    {
+        RewardDatabaseReady = false;
+        RewardDatabase.Close();
+    }
+};
+
 void AddZoeCoreReiDoPvPScripts()
 {
+    new ZoeCoreReiRewardDatabase();
     new ZoeCoreReiDoPvPPlayerScript();
     new npc_reidopvp();
 }
